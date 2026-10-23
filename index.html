@@ -1227,6 +1227,24 @@
             return { subtotal, discount, percent, total: subtotal - discount };
         }
 
+        function getRecapCalculation() {
+            const direct = appData.items.reduce((sum, item) => sum + (Number(item.vol) || 0) * (Number(item.price) || 0), 0);
+            const rabTotals = getRabTotals();
+            const discount = Math.min(direct, Math.max(0, Number(rabTotals.discount) || 0));
+            const discountPct = direct > 0 ? discount / direct * 100 : 0;
+            const afterDiscount = Math.max(0, direct - discount);
+            const overheadPct = Math.max(0, parseFloat(document.getElementById('recap-overhead-pct')?.value) || 0);
+            const taxEnabled = !!document.getElementById('recap-tax-enabled')?.checked;
+            const overhead = afterDiscount * overheadPct / 100;
+            const tax = taxEnabled ? (afterDiscount + overhead) * 0.11 : 0;
+            const beforeRounding = afterDiscount + overhead + tax;
+            const roundingMode = document.getElementById('recap-rounding')?.value || 'none';
+            const total = roundingMode === 'thousand' ? Math.round(beforeRounding / 1000) * 1000 : beforeRounding;
+            const roundingAdjustment = total - beforeRounding;
+            const area = Math.max(0, Number(appData.project.buildingarea) || 0);
+            return { direct, discount, discountPct, afterDiscount, overheadPct, overhead, taxEnabled, tax, beforeRounding, roundingAdjustment, total, area, perM2: area > 0 ? total / area : 0 };
+        }
+
         function renderRabTotals() {
             const { subtotal, discount, percent, total } = getRabTotals();
             const sub = document.getElementById('rab-subtotal'); if (sub) sub.textContent = formatIDR(subtotal);
@@ -1758,6 +1776,46 @@
                 }
                 XLSX.utils.book_append_sheet(wb, wsMat, 'Database Material');
 
+                // Rekapitulasi dibuat dari perhitungan yang sama dengan tampilan web.
+                const calc = getRecapCalculation();
+                const recapRows = [
+                    ['REKAPITULASI RENCANA ANGGARAN BIAYA (RAB)'],
+                    [`Proyek: ${project.name || '-'} | Lokasi: ${project.location || '-'}`],
+                    ['No', 'Kategori Pekerjaan Utama', 'Jumlah Harga (Rp)', 'Bobot (%)']
+                ];
+                let recapNo = 1;
+                appData.categories.forEach(cat => {
+                    const catTotal = appData.items.filter(i => i.catId === cat.id).reduce((sum, i) => sum + (Number(i.vol) || 0) * (Number(i.price) || 0), 0);
+                    if (catTotal > 0) recapRows.push([recapNo++, cat.name || 'Kategori', catTotal, calc.direct > 0 ? catTotal / calc.direct : 0]);
+                });
+                const recapDirectRow = recapRows.length;
+                recapRows.push(['', 'JUMLAH BIAYA LANGSUNG (A)', calc.direct, 1]);
+                if (calc.discount > 0) recapRows.push(['', `Diskon (${calc.discountPct.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%)`, -calc.discount, '']);
+                recapRows.push(['', 'Biaya Setelah Diskon', calc.afterDiscount, '']);
+                recapRows.push(['', `Overhead & Jasa Kontraktor (${calc.overheadPct.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%)`, calc.overhead, '']);
+                if (calc.taxEnabled) recapRows.push(['', 'PPN 11%', calc.tax, '']);
+                recapRows.push(['', 'Pembulatan', calc.roundingAdjustment, '']);
+                const recapTotalRow = recapRows.length;
+                recapRows.push(['', 'TOTAL AKHIR RAB (DIBULATKAN)', calc.total, '']);
+                recapRows.push(['', 'Estimasi per m² Bangunan', calc.perM2, '']);
+                const wsRecap = XLSX.utils.aoa_to_sheet(recapRows);
+                wsRecap['!cols'] = [{ wch: 7 }, { wch: 48 }, { wch: 24 }, { wch: 14 }];
+                wsRecap['!merges'] = [
+                    { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+                    { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } }
+                ];
+                const recapBorder = { top: { style: 'thin', color: { rgb: 'CBD5E1' } }, bottom: { style: 'thin', color: { rgb: 'CBD5E1' } }, left: { style: 'thin', color: { rgb: 'CBD5E1' } }, right: { style: 'thin', color: { rgb: 'CBD5E1' } } };
+                for (let r = 0; r < recapRows.length; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        const cell = wsRecap[XLSX.utils.encode_cell({ r, c })];
+                        if (!cell) continue;
+                        cell.s = { font: { name: 'Arial', sz: r === 0 ? 14 : 10, bold: r === 0 || r === 2 || r === recapDirectRow || r === recapTotalRow, color: { rgb: r === 2 || r === recapTotalRow ? 'FFFFFF' : '0F172A' } }, fill: { fgColor: { rgb: r === 2 || r === recapTotalRow ? '0F172A' : (r === recapDirectRow ? 'E2E8F0' : 'FFFFFF') } }, alignment: { vertical: 'center', horizontal: c >= 2 ? 'right' : (c === 0 ? 'center' : 'left'), wrapText: true }, border: recapBorder };
+                        if (c === 2 && r >= 3) cell.z = '"Rp" #,##0;[Red]-"Rp" #,##0';
+                        if (c === 3 && r >= 3 && typeof cell.v === 'number') cell.z = '0.00"%"';
+                    }
+                }
+                XLSX.utils.book_append_sheet(wb, wsRecap, 'Rekapitulasi');
+
                 XLSX.writeFile(wb, `RAB_${safeName}.xlsx`);
                 closeModal('modal-export');
                 showToast('Sukses', 'Excel RAB berhasil diunduh dengan format laporan yang mengikuti PDF.');
@@ -1832,15 +1890,41 @@
                     });
                 }
 
-                let finalY = (typeof doc.lastAutoTable !== 'undefined' && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY + 10 : startY + 10;
-                const totals = getRabTotals();
-                doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-                if (totals.discount > 0) {
-                    doc.text(`Diskon (${totals.percent.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%): - ${formatIDR(totals.discount)}`, 14, finalY);
-                    finalY += 6;
-                }
-                doc.setFontSize(11); doc.setFont('helvetica', 'bold');
-                doc.text(`TOTAL ESTIMASI AKHIR: ${formatIDR(totals.total)}`, 14, finalY);
+                let finalY = (typeof doc.lastAutoTable !== 'undefined' && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY + 7 : 58;
+                const calc = getRecapCalculation();
+                // Compact recap table styled to match the dark navy/gray web table.
+                if (finalY > 205) { doc.addPage(); finalY = 18; }
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+                doc.setTextColor(15, 23, 42);
+                doc.text('REKAPITULASI RENCANA ANGGARAN BIAYA (RAB)', 14, finalY);
+                finalY += 3;
+                const recapBody = [];
+                let recapNo = 1;
+                appData.categories.forEach(cat => {
+                    const catTotal = appData.items.filter(i => i.catId === cat.id).reduce((sum, i) => sum + (Number(i.vol) || 0) * (Number(i.price) || 0), 0);
+                    if (catTotal > 0) recapBody.push([recapNo++, cat.name || 'Kategori', formatIDR(catTotal), `${calc.direct > 0 ? (catTotal / calc.direct * 100).toFixed(2) : '0.00'}%`]);
+                });
+                recapBody.push([{ content: 'JUMLAH BIAYA LANGSUNG (A)', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold', fillColor: [226, 232, 240] } }, { content: formatIDR(calc.direct), styles: { fontStyle: 'bold', fillColor: [226, 232, 240], halign: 'right' } }, { content: '100.00%', styles: { fontStyle: 'bold', fillColor: [226, 232, 240], halign: 'right' } }]);
+                if (calc.discount > 0) recapBody.push([{ content: `Diskon (${calc.discountPct.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%)`, colSpan: 2, styles: { textColor: [180, 83, 9], halign: 'right' } }, { content: `- ${formatIDR(calc.discount)}`, styles: { textColor: [180, 83, 9], halign: 'right' } }, '']);
+                recapBody.push([{ content: 'Biaya Setelah Diskon', colSpan: 2, styles: { halign: 'right' } }, { content: formatIDR(calc.afterDiscount), styles: { halign: 'right' } }, '']);
+                recapBody.push([{ content: `Overhead & Jasa Kontraktor (${calc.overheadPct.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%)`, colSpan: 2, styles: { halign: 'right' } }, { content: `+ ${formatIDR(calc.overhead)}`, styles: { halign: 'right' } }, '']);
+                if (calc.taxEnabled) recapBody.push([{ content: 'PPN 11%', colSpan: 2, styles: { halign: 'right' } }, { content: `+ ${formatIDR(calc.tax)}`, styles: { halign: 'right' } }, '']);
+                recapBody.push([{ content: 'Pembulatan', colSpan: 2, styles: { halign: 'right' } }, { content: `${calc.roundingAdjustment > 0 ? '+ ' : calc.roundingAdjustment < 0 ? '- ' : ''}${formatIDR(Math.abs(calc.roundingAdjustment))}`, styles: { halign: 'right' } }, '']);
+                recapBody.push([{ content: 'TOTAL AKHIR RAB (DIBULATKAN)', colSpan: 2, styles: { fontStyle: 'bold', textColor: [255, 255, 255], fillColor: [15, 23, 42], halign: 'right' } }, { content: formatIDR(calc.total), styles: { fontStyle: 'bold', textColor: [16, 185, 129], fillColor: [15, 23, 42], halign: 'right' } }, { content: '', styles: { fillColor: [15, 23, 42] } }]);
+                recapBody.push([{ content: 'Estimasi per m² Bangunan', colSpan: 2, styles: { fontStyle: 'bold', fillColor: [241, 245, 249], halign: 'right' } }, { content: `${formatIDR(calc.perM2)} / m²`, styles: { fontStyle: 'bold', fillColor: [241, 245, 249], halign: 'right' } }, { content: '', styles: { fillColor: [241, 245, 249] } }]);
+                doc.autoTable({
+                    startY: finalY,
+                    head: [['No', 'Kategori Pekerjaan Utama', 'Jumlah Harga (Rp)', 'Bobot (%)']],
+                    body: recapBody,
+                    theme: 'grid',
+                    margin: { left: 14, right: 14 },
+                    tableWidth: 'auto',
+                    styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 1.5, lineColor: [203, 213, 225], lineWidth: 0.15, textColor: [51, 65, 85], overflow: 'linebreak', valign: 'middle' },
+                    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 7.5 },
+                    columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 43, halign: 'right' }, 3: { cellWidth: 20, halign: 'right' } },
+                    didParseCell: function(data) { if (data.section === 'body' && data.row.raw && data.row.raw[0] && data.row.raw[0].colSpan === 2) { data.cell.styles.fontSize = 7.3; } }
+                });
 
                 doc.save(`RAB_${appData.project.name.replace(/\s+/g, '_')}.pdf`);
                 closeModal('modal-export');
