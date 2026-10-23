@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi RAB Bangunan Profesional Indonesia (RAB-Pro)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS (XLSX Export) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <!-- jsPDF & AutoTable (PDF Export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; color: black !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40 no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-emerald-600 text-white p-2.5 rounded-xl shadow-lg flex items-center justify-center">
+                    <i class="fa-solid fa-calculator text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">RAB-Pro Indonesia</h1>
+                    <p class="text-xs text-slate-400">Estimator Proyek Konstruksi & QS Otomatis</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="switchTab('dashboard')" class="nav-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white transition hover:bg-emerald-500 flex items-center gap-1.5" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i> Dashboard
+                </button>
+                <button onclick="switchTab('project')" class="nav-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 transition hover:bg-slate-700 flex items-center gap-1.5" data-tab="project">
+                    <i class="fa-solid fa-building"></i> Data Proyek
+                </button>
+                <button onclick="switchTab('rab')" class="nav-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 transition hover:bg-slate-700 flex items-center gap-1.5" data-tab="rab">
+                    <i class="fa-solid fa-list-check"></i> Detail RAB & Volume
+                </button>
+                <button onclick="switchTab('ahsp')" class="nav-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 transition hover:bg-slate-700 flex items-center gap-1.5" data-tab="ahsp">
+                    <i class="fa-solid fa-calculator"></i> AHSP & Harga Satuan
+                </button>
+                <button onclick="switchTab('database')" class="nav-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 transition hover:bg-slate-700 flex items-center gap-1.5" data-tab="database">
+                    <i class="fa-solid fa-database"></i> DB Material & Upah
+                </button>
+                <button onclick="switchTab('recap')" class="nav-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 transition hover:bg-slate-700 flex items-center gap-1.5" data-tab="recap">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> Rekapitulasi
+                </button>
+                <button onclick="switchTab('calc')" class="nav-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 transition hover:bg-slate-700 flex items-center gap-1.5" data-tab="calc">
+                    <i class="fa-solid fa-ruler-combined"></i> Kalkulator Ahli
+                </button>
+                <button onclick="switchTab('guide')" class="nav-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 transition hover:bg-slate-700 flex items-center gap-1.5" data-tab="guide">
+                    <i class="fa-solid fa-book"></i> Panduan
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+
+        <!-- NOTIFICATION BANNER / MODAL -->
+        <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 hidden flex items-center gap-3 transition-all transform translate-y-2">
+            <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+            <div>
+                <p id="toast-title" class="font-semibold text-sm">Notifikasi</p>
+                <p id="toast-msg" class="text-xs text-slate-300">Pesan keterangan di sini.</p>
+            </div>
+        </div>
+
+        <!-- 1. DASHBOARD TAB -->
+        <section id="tab-dashboard" class="tab-content space-y-6">
+            <div class="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <span class="bg-emerald-500/40 text-emerald-100 text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider">Proyek Aktif</span>
+                    <h2 id="dash-project-name" class="text-2xl md:text-3xl font-bold mt-2">Rumah Tinggal Modern 2 Lantai</h2>
+                    <p id="dash-project-location" class="text-emerald-100 text-sm mt-1"><i class="fa-solid fa-location-dot mr-1"></i> Lokasi: Jawa Tengah | Pemilik: Bpk. H. Ahmad</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="loadTemplate('1lantai')" class="bg-white/10 hover:bg-white/20 border border-white/30 text-white px-3 py-2 rounded-xl text-xs font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-house"></i> Template 1 Lantai
+                    </button>
+                    <button onclick="loadTemplate('2lantai')" class="bg-white/10 hover:bg-white/20 border border-white/30 text-white px-3 py-2 rounded-xl text-xs font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-hotel"></i> Template 2 Lantai
+                    </button>
+                    <button onclick="openExportModal()" class="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-download"></i> Ekspor Laporan
+                    </button>
+                </div>
+            </div>
+
+            <!-- Metric Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase">Total Estimasi RAB</p>
+                        <h3 id="dash-total-cost" class="text-xl font-bold text-slate-900 mt-1">Rp0</h3>
+                        <p id="dash-cost-m2" class="text-xs text-emerald-600 font-semibold mt-1">Rp0 / m² bangunan</p>
+                    </div>
+                    <div class="bg-emerald-50 text-emerald-600 p-3.5 rounded-xl">
+                        <i class="fa-solid fa-wallet text-xl"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase">Total Item Pekerjaan</p>
+                        <h3 id="dash-total-items" class="text-xl font-bold text-slate-900 mt-1">0 Item</h3>
+                        <p class="text-xs text-slate-400 mt-1">Dari 17 Kategori SNI</p>
+                    </div>
+                    <div class="bg-blue-50 text-blue-600 p-3.5 rounded-xl">
+                        <i class="fa-solid fa-list-check text-xl"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase">Biaya Material (60-70%)</p>
+                        <h3 id="dash-total-material" class="text-xl font-bold text-slate-900 mt-1">Rp0</h3>
+                        <p class="text-xs text-slate-400 mt-1">Bahan & Komponen</p>
+                    </div>
+                    <div class="bg-amber-50 text-amber-600 p-3.5 rounded-xl">
+                        <i class="fa-solid fa-boxes-stacked text-xl"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase">Biaya Upah & Alat</p>
+                        <h3 id="dash-total-labor" class="text-xl font-bold text-slate-900 mt-1">Rp0</h3>
+                        <p class="text-xs text-slate-400 mt-1">Pekerja & Tukang</p>
+                    </div>
+                    <div class="bg-purple-50 text-purple-600 p-3.5 rounded-xl">
+                        <i class="fa-solid fa-users text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Audit & Actions Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-slate-800 text-base"><i class="fa-solid fa-chart-bar text-emerald-600 mr-2"></i> Ringkasan Biaya per Kategori Utama</h3>
+                        <button onclick="switchTab('recap')" class="text-xs text-emerald-600 font-semibold hover:underline">Lihat Detail Rekap <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 uppercase font-semibold">
+                                    <th class="p-3 rounded-l-lg">Kode & Kategori</th>
+                                    <th class="p-3 text-right">Subtotal (Rp)</th>
+                                    <th class="p-3 text-right rounded-r-lg">Persentase (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-category-summary" class="divide-y divide-slate-100">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base mb-3"><i class="fa-solid fa-shield-halved text-emerald-600 mr-2"></i> Audit & Validasi RAB</h3>
+                        <p class="text-xs text-slate-500 mb-4">Periksa kelengkapan volume, satuan, dan harga satuan material sebelum dicetak.</p>
+                        <div id="audit-results" class="space-y-2 mb-4">
+                            <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2">
+                                <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                                <span>Semua struktur dasar dan volume terisi dengan baik.</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="runAudit()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-stethoscope"></i> Jalankan Pemeriksaan RAB
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. IDENTITAS & DATA PROYEK TAB -->
+        <section id="tab-project" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-4xl mx-auto">
+                <div class="border-b border-slate-200 pb-4 mb-6">
+                    <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-building text-emerald-600 mr-2"></i> Identitas & Data Proyek Konstruksi</h2>
+                    <p class="text-xs text-slate-500 mt-1">Data ini otomatis disematkan pada header laporan PDF dan Excel ekspor.</p>
+                </div>
+
+                <form id="project-form" onsubmit="saveProjectData(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Nama Proyek *</label>
+                        <input type="text" id="p-name" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Nama Pemilik Proyek *</label>
+                        <input type="text" id="p-owner" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block font-semibold text-slate-700 mb-1">Lokasi Proyek (Kabupaten/Kota di Jawa Tengah / Lainnya) *</label>
+                        <input type="text" id="p-location" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Nama Kontraktor / Estimator</label>
+                        <input type="text" id="p-contractor" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Tanggal Penyusunan RAB</label>
+                        <input type="date" id="p-date" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Nomor Dokumen RAB</label>
+                        <input type="text" id="p-docno" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Jenis Proyek</label>
+                        <select id="p-type" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="Bangunan Baru">Bangunan Baru</option>
+                            <option value="Renovasi Total">Renovasi Total</option>
+                            <option value="Renovasi Sebagian">Renovasi Sebagian</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Jumlah Lantai</label>
+                        <input type="number" id="p-floors" min="1" max="10" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Luas Tanah (m²)</label>
+                        <input type="number" step="0.01" id="p-landarea" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Luas Bangunan (m²) *</label>
+                        <input type="number" step="0.01" id="p-buildingarea" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block font-semibold text-slate-700 mb-1">Catatan & Asumsi Proyek</label>
+                        <textarea id="p-notes" rows="3" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+                    </div>
+                    <div class="md:col-span-2 flex justify-end gap-3 pt-3">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-2.5 rounded-xl shadow transition">
+                            <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan Data Proyek
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- 3. DETAIL RAB & VOLUME TAB -->
+        <section id="tab-rab" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4 mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-list-check text-emerald-600 mr-2"></i> Daftar Pekerjaan & Perhitungan Volume RAB</h2>
+                        <p class="text-xs text-slate-500 mt-1">Kelola 17 Kategori SNI, tambah item pekerjaan, hitung volume otomatis atau input manual.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="openAddItemModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> Tambah Item Pekerjaan
+                        </button>
+                        <button onclick="openCategoryModal()" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-folder-plus"></i> Kategori Baru
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters & Search -->
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4 text-xs">
+                    <div class="w-full sm:w-72 relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
+                        <input type="text" id="rab-search" oninput="renderRabTable()" placeholder="Cari uraian pekerjaan..." class="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div class="w-full sm:w-auto flex items-center gap-2">
+                        <label class="font-semibold text-slate-600">Filter Kategori:</label>
+                        <select id="rab-filter-cat" onchange="renderRabTable()" class="p-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="ALL">Semua Kategori (17 SNI)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- RAB Table Container -->
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-900 text-white uppercase text-[11px] tracking-wider">
+                                <th class="p-3">No</th>
+                                <th class="p-3">Uraian Pekerjaan & Spesifikasi</th>
+                                <th class="p-3 text-center">Sat</th>
+                                <th class="p-3 text-right">Volume</th>
+                                <th class="p-3 text-right">Harga Satuan (Rp)</th>
+                                <th class="p-3 text-right">Total Harga (Rp)</th>
+                                <th class="p-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rab-table-body" class="divide-y divide-slate-200 bg-white">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4"><label for="rab-discount-amount" class="block font-semibold text-slate-700 mb-2">Diskon (Rp) — tampil sebagai Diskon %</label><input id="rab-discount-amount" type="number" min="0" step="1000" value="0" oninput="renderRabTotals()" class="w-full p-2.5 border border-slate-300 rounded-xl bg-white" placeholder="Contoh: 2000000"><p class="text-slate-500 mt-2">Masukkan nominal potongan. Persentase dihitung otomatis dari total RAB.</p></div>
+                    <div class="md:col-span-2 bg-slate-900 text-white rounded-xl p-4 space-y-2">
+                        <div class="flex justify-between gap-3"><span>Subtotal RAB</span><strong id="rab-subtotal">Rp 0</strong></div>
+                        <div id="rab-discount-row" class="hidden flex justify-between gap-3 text-amber-300"><span id="rab-discount-label">Diskon (0%)</span><strong id="rab-discount-value">- Rp 0</strong></div>
+                        <div class="border-t border-slate-700 pt-2 flex justify-between gap-3 text-base"><span class="font-bold">TOTAL KESELURUHAN</span><strong id="rab-grand-total" class="text-emerald-300">Rp 0</strong></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. AHSP MODUL TAB -->
+        <section id="tab-ahsp" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="border-b border-slate-200 pb-4 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-calculator text-emerald-600 mr-2"></i> Analisis Harga Satuan Pekerjaan (AHSP)</h2>
+                        <p class="text-xs text-slate-500 mt-1">Rincian koefisien material, upah tenaga kerja, dan peralatan berdasarkan standar SNI/analisis terverifikasi.</p>
+                    </div>
+                    <button onclick="openAhspModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i> Tambah Analisis AHSP
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- AHSP List Selector -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                        <h3 class="font-bold text-slate-700 text-xs uppercase tracking-wider">Pilih Analisis AHSP</h3>
+                        <div id="ahsp-list-container" class="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
+                            <!-- AHSP items list -->
+                        </div>
+                    </div>
+
+                    <!-- AHSP Detail Viewer/Editor -->
+                    <div id="ahsp-detail-panel" class="md:col-span-2 bg-slate-50 p-5 rounded-xl border border-slate-200 flex flex-col justify-between">
+                        <div class="text-center py-16 text-slate-400">
+                            <i class="fa-solid fa-arrow-left text-3xl mb-2"></i>
+                            <p class="text-sm font-medium">Pilih salah satu item AHSP di sebelah kiri untuk melihat dan mengedit rincian koefisien.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. DATABASE MATERIAL & UPAH TAB -->
+        <section id="tab-database" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="border-b border-slate-200 pb-4 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-database text-emerald-600 mr-2"></i> Database Harga Material & Upah (Jawa Tengah & Sekitarnya)</h2>
+                        <p class="text-xs text-slate-500 mt-1">Kelola harga satuan material bangunan dan upah pekerja harian. Dilengkapi label SIMULASI dan TERVERIFIKASI.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openMaterialModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> Tambah Material/Upah
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabs for Material vs Wage -->
+                <div class="flex border-b border-slate-200 mb-4 text-xs font-semibold">
+                    <button onclick="switchDbTab('material')" id="btn-db-mat" class="px-4 py-2 border-b-2 border-emerald-600 text-emerald-600 focus:outline-none">Database Material & Alat</button>
+                    <button onclick="switchDbTab('wage')" id="btn-db-wage" class="px-4 py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700 focus:outline-none">Database Upah Pekerja</button>
+                </div>
+
+                <div id="db-content-material">
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-900 text-white uppercase text-[11px]">
+                                    <th class="p-3">Nama Material / Alat</th>
+                                    <th class="p-3">Spesifikasi / Merek</th>
+                                    <th class="p-3 text-center">Sat</th>
+                                    <th class="p-3 text-right">Harga (Rp)</th>
+                                    <th class="p-3">Status / Sumber</th>
+                                    <th class="p-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="material-table-body" class="divide-y divide-slate-200 bg-white">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="db-content-wage" class="hidden">
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-900 text-white uppercase text-[11px]">
+                                    <th class="p-3">Jenis Tenaga Kerja</th>
+                                    <th class="p-3 text-center">Satuan</th>
+                                    <th class="p-3 text-right">Upah / Hari (Rp)</th>
+                                    <th class="p-3">Keterangan / Sumber</th>
+                                    <th class="p-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wage-table-body" class="divide-y divide-slate-200 bg-white">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. REKAPITULASI ANGGARAN TAB -->
+        <section id="tab-recap" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-5xl mx-auto space-y-6">
+                <div class="border-b border-slate-200 pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-file-invoice-dollar text-emerald-600 mr-2"></i> REKAPITULASI RENCANA ANGGARAN BIAYA (RAB)</h2>
+                        <p id="recap-proj-subtitle" class="text-xs text-slate-500 mt-1">Proyek: Rumah Tinggal 2 Lantai | Lokasi: Jawa Tengah</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="openExportModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center gap-1.5">
+                            <i class="fa-solid fa-download"></i> Ekspor Excel & PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recap Table -->
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-900 text-white uppercase text-[11px]">
+                                <th class="p-3 text-center w-16">No</th>
+                                <th class="p-3">Kategori Pekerjaan Utama</th>
+                                <th class="p-3 text-right">Jumlah Harga (Rp)</th>
+                                <th class="p-3 text-right w-24">Bobot (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recap-table-body" class="divide-y divide-slate-200 bg-white">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                        <tfoot class="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
+                            <tr>
+                                <td colspan="2" class="p-3 text-right">JUMLAH BIAYA LANGSUNG (A)</td>
+                                <td id="recap-subtotal-direct" class="p-3 text-right">Rp0</td>
+                                <td class="p-3 text-right">100.00%</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Overhead, Profit & Taxes Setup Box -->
+                <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Overhead & Jasa Kontraktor (%)</label>
+                        <input type="number" step="0.5" id="recap-overhead-pct" value="10" oninput="calculateRecap()" class="w-full p-2 border border-slate-300 rounded-xl bg-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Pajak (PPN 11% / Lainnya)</label>
+                        <div class="flex items-center gap-2 mt-1">
+                            <input type="checkbox" id="recap-tax-enabled" checked onchange="calculateRecap()" class="w-4 h-4 text-emerald-600 rounded">
+                            <span class="text-slate-700 font-medium">Aktifkan PPN 11%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Pembulatan Nominal</label>
+                        <select id="recap-rounding" onchange="calculateRecap()" class="w-full p-2 border border-slate-300 rounded-xl bg-white">
+                            <option value="none">Tanpa Pembulatan</option>
+                            <option value="thousand" selected>Bulatkan ke Rp 1.000 Terdekat</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Grand Total Box -->
+                <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase tracking-wider">TOTAL AKHIR RAB (DIBULATKAN)</p>
+                        <h3 id="recap-grand-total" class="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1">Rp0</h3>
+                        <p id="recap-total-words" class="text-xs text-slate-300 italic mt-1">Terbilang: -</p>
+                    </div>
+                    <div class="text-right sm:text-right">
+                        <p class="text-xs text-slate-400">Estimasi per m² Bangunan</p>
+                        <p id="recap-unit-cost" class="text-lg font-bold text-white mt-0.5">Rp0 / m²</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. KALKULATOR AHLI KONSTRUKSI TAB -->
+        <section id="tab-calc" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-4xl mx-auto space-y-6">
+                <div class="border-b border-slate-200 pb-4">
+                    <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-ruler-combined text-emerald-600 mr-2"></i> Kalkulator Khusus Konstruksi & Perhitungan Cepat</h2>
+                    <p class="text-xs text-slate-500 mt-1">Pilih kalkulator untuk menghitung volume struktur, material, atau pengecatan secara akurat dan kirim langsung ke RAB.</p>
+                </div>
+
+                <!-- Calculator Selector -->
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="switchCalc('brick')" id="btn-calc-brick" class="px-3 py-2 text-xs font-semibold rounded-xl bg-emerald-600 text-white transition">Pasangan Bata / Dinding</button>
+                    <button onclick="switchCalc('concrete')" id="btn-calc-concrete" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 transition">Volume Beton & Bekisting</button>
+                    <button onclick="switchCalc('ceramic')" id="btn-calc-ceramic" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 transition">Keramik Lantai & Waste</button>
+                    <button onclick="switchCalc('paint')" id="btn-calc-paint" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 transition">Pengecatan Dinding</button>
+                    <button onclick="switchCalc('rebar')" id="btn-calc-rebar" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 transition">Besi Beton & Berat</button>
+                </div>
+
+                <!-- 1. Brick Calculator -->
+                <div id="calculator-brick" class="calc-panel space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 text-xs">
+                    <h3 class="font-bold text-slate-800 text-sm">Kalkulator Kebutuhan Bata Merah / Bata Ringan (Hebel)</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1"><label for="bc-len" class="block font-semibold">Panjang Dinding</label><select id="bc-len-unit" aria-label="Satuan panjang dinding" class="p-1.5 border rounded-lg bg-white font-semibold"><option value="m" selected>m</option><option value="cm">cm</option><option value="mm">mm</option></select></div>
+                            <input type="number" step="any" id="bc-len" value="10" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1"><label for="bc-hei" class="block font-semibold">Tinggi Dinding</label><select id="bc-hei-unit" aria-label="Satuan tinggi dinding" class="p-1.5 border rounded-lg bg-white font-semibold"><option value="m" selected>m</option><option value="cm">cm</option><option value="mm">mm</option></select></div>
+                            <input type="number" step="any" id="bc-hei" value="3" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-1">Jenis Pasangan</label>
+                            <select id="bc-type" class="w-full p-2.5 border rounded-xl bg-white">
+                                <option value="bata_ringan">Bata Ringan / Hebel</option>
+                                <option value="bata_merah_1pc_5ps">Bata Merah</option>
+                                <option value="batako">Batako</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-1">Ketebalan Dinding</label>
+                            <div class="flex gap-2"><input type="number" id="bc-thick" value="10" min="1" step="1" class="w-full p-2.5 border rounded-xl bg-white"><select id="bc-thick-unit" class="p-2.5 border rounded-xl bg-white"><option value="cm">cm</option><option value="mm">mm</option><option value="m">m</option></select></div>
+                        </div>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <p class="font-bold text-emerald-900 text-sm" id="bc-result-title">Hasil: Luas 30 m²</p>
+                            <p class="text-emerald-700 text-xs mt-0.5" id="bc-result-detail">Estimasi: 2,100 buah bata + 1.2 m³ mortar</p>
+                        </div>
+                        <button onclick="sendCalcToRab('Dinding', 'Pasangan Bata Ringan 10cm', 'm2', getCalcVolume('brick'))" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-semibold shadow transition">
+                            <i class="fa-solid fa-paper-plane mr-1"></i> Kirim ke Item RAB
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Concrete Calculator -->
+                <div id="calculator-concrete" class="calc-panel hidden space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 text-xs">
+                    <h3 class="font-bold text-slate-800 text-sm">Kalkulator Volume Beton (Kolom / Balok / Sloof)</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1"><label for="cc-len" class="block font-semibold">Panjang</label><select id="cc-len-unit" aria-label="Satuan panjang" class="p-1.5 border rounded-lg bg-white font-semibold"><option value="m" selected>m</option><option value="cm">cm</option><option value="mm">mm</option></select></div>
+                            <input type="number" step="any" id="cc-len" value="4" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1"><label for="cc-wid" class="block font-semibold">Lebar</label><select id="cc-wid-unit" aria-label="Satuan lebar" class="p-1.5 border rounded-lg bg-white font-semibold"><option value="m" selected>m</option><option value="cm">cm</option><option value="mm">mm</option></select></div>
+                            <input type="number" step="any" id="cc-wid" value="0.15" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1"><label for="cc-hei" class="block font-semibold">Tinggi / Tebal</label><select id="cc-hei-unit" aria-label="Satuan tinggi / tebal" class="p-1.5 border rounded-lg bg-white font-semibold"><option value="m" selected>m</option><option value="cm">cm</option><option value="mm">mm</option></select></div>
+                            <input type="number" step="any" id="cc-hei" value="0.3" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-1">Jumlah Elemen</label>
+                            <input type="number" id="cc-qty" value="10" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <p class="font-bold text-emerald-900 text-sm" id="cc-result-title">Hasil Volume: 1.80 m³</p>
+                            <p class="text-emerald-700 text-xs mt-0.5">Rumus: Panjang × Lebar × Tinggi × Jumlah</p>
+                        </div>
+                        <button onclick="sendCalcToRab('Beton', 'Pekerjaan Beton Bertulang K-225', 'm3', getCalcVolume('concrete'))" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-semibold shadow transition">
+                            <i class="fa-solid fa-paper-plane mr-1"></i> Kirim ke Item RAB
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Ceramic Calculator -->
+                <div id="calculator-ceramic" class="calc-panel hidden space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 text-xs">
+                    <h3 class="font-bold text-slate-800 text-sm">Kalkulator Keramik Lantai & Faktor Waste (Potongan)</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1"><label for="cer-len" class="block font-semibold">Panjang Ruangan</label><select id="cer-len-unit" aria-label="Satuan panjang ruangan" class="p-1.5 border rounded-lg bg-white font-semibold"><option value="m" selected>m</option><option value="cm">cm</option><option value="mm">mm</option></select></div>
+                            <input type="number" step="any" id="cer-len" value="6" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1"><label for="cer-wid" class="block font-semibold">Lebar Ruangan</label><select id="cer-wid-unit" aria-label="Satuan lebar ruangan" class="p-1.5 border rounded-lg bg-white font-semibold"><option value="m" selected>m</option><option value="cm">cm</option><option value="mm">mm</option></select></div>
+                            <input type="number" step="any" id="cer-wid" value="5" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-1">Faktor Waste / Cadangan</label>
+                            <select id="cer-waste" class="w-full p-2.5 border rounded-xl bg-white">
+                                <option value="1.05">5% (Standar Ruang Persegi)</option>
+                                <option value="1.10" selected>10% (Standar Umum / Banyak Sudut)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <p class="font-bold text-emerald-900 text-sm" id="cer-result-title">Luas Bersih: 30 m² | Termasuk Waste: 33 m²</p>
+                        </div>
+                        <button onclick="sendCalcToRab('Lantai', 'Pemasangan Keramik Lantai 60x60', 'm2', getCalcVolume('ceramic'))" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-semibold shadow transition">
+                            <i class="fa-solid fa-paper-plane mr-1"></i> Kirim ke Item RAB
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4. Paint Calculator -->
+                <div id="calculator-paint" class="calc-panel hidden space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 text-xs">
+                    <h3 class="font-bold text-slate-800 text-sm">Kalkulator Pengecatan Dinding & Plafon</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1"><label for="pt-perim" class="block font-semibold">Keliling Dinding</label><select id="pt-perim-unit" aria-label="Satuan keliling dinding" class="p-1.5 border rounded-lg bg-white font-semibold"><option value="m" selected>m</option><option value="cm">cm</option><option value="mm">mm</option></select></div>
+                            <input type="number" step="any" id="pt-perim" value="32" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1"><label for="pt-hei" class="block font-semibold">Tinggi Dinding</label><select id="pt-hei-unit" aria-label="Satuan tinggi dinding" class="p-1.5 border rounded-lg bg-white font-semibold"><option value="m" selected>m</option><option value="cm">cm</option><option value="mm">mm</option></select></div>
+                            <input type="number" step="any" id="pt-hei" value="3.5" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-1">Jumlah Lapisan Cat</label>
+                            <input type="number" id="pt-coats" value="2" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <p class="font-bold text-emerald-900 text-sm" id="pt-result-title">Luas Pengecatan: 224 m²</p>
+                        </div>
+                        <button onclick="sendCalcToRab('Pengecatan', 'Pengecatan Dinding Tembok (2 Lapis)', 'm2', getCalcVolume('paint'))" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-semibold shadow transition">
+                            <i class="fa-solid fa-paper-plane mr-1"></i> Kirim ke Item RAB
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 5. Rebar Calculator -->
+                <div id="calculator-rebar" class="calc-panel hidden space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 text-xs">
+                    <h3 class="font-bold text-slate-800 text-sm">Kalkulator Besi Beton & Estimasi Berat (SNI)</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block font-semibold mb-1">Diameter Besi (mm)</label>
+                            <select id="rb-dia" class="w-full p-2.5 border rounded-xl bg-white">
+                                <option value="8">Diameter 8 mm (0.395 kg/m)</option>
+                                <option value="10">Diameter 10 mm (0.617 kg/m)</option>
+                                <option value="12" selected>Diameter 12 mm (0.888 kg/m)</option>
+                                <option value="16">Diameter 16 mm (1.578 kg/m)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-1">Jumlah Batang (panjang 12m)</label>
+                            <input type="number" id="rb-qty" value="50" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-1">Faktor Lebur / Sambungan (%)</label>
+                            <input type="number" id="rb-wast" value="10" class="w-full p-2.5 border rounded-xl bg-white">
+                        </div>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <p class="font-bold text-emerald-900 text-sm" id="rb-result-title">Estimasi Berat Total: 588 Kg</p>
+                        </div>
+                        <button onclick="sendCalcToRab('Struktur', 'Besi Beton Ulir/Polos (Supply & Install)', 'kg', getCalcVolume('rebar'))" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-semibold shadow transition">
+                            <i class="fa-solid fa-paper-plane mr-1"></i> Kirim ke Item RAB
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. PANDUAN PEMAKAIAN TAB -->
+        <section id="tab-guide" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-4xl mx-auto space-y-6">
+                <div class="border-b border-slate-200 pb-4">
+                    <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-book text-emerald-600 mr-2"></i> Panduan Pemakaian Aplikasi RAB untuk Pemula</h2>
+                    <p class="text-xs text-slate-500 mt-1">Langkah demi langkah menyusun Anggaran Biaya Proyek Konstruksi secara profesional dan akurat di Indonesia.</p>
+                </div>
+
+                <div class="space-y-4 text-xs text-slate-700">
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex gap-4">
+                        <div class="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0">1</div>
+                        <div>
+                            <h4 class="font-bold text-slate-900 text-sm">Isi Identitas Proyek</h4>
+                            <p class="text-slate-600 mt-1">Masuk ke menu <b class="text-slate-900">Data Proyek</b> untuk mengisi nama pemilik, lokasi (misal: Jawa Tengah), luas bangunan, dan jumlah lantai. Data ini akan otomatis masuk ke kop surat Excel dan PDF.</p>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex gap-4">
+                        <div class="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0">2</div>
+                        <div>
+                            <h4 class="font-bold text-slate-900 text-sm">Gunakan Template Cepat atau Input Item</h4>
+                            <p class="text-slate-600 mt-1">Di Dashboard, Anda bisa langsung mengklik <b class="text-slate-900">Template 1 Lantai</b> atau <b class="text-slate-900">Template 2 Lantai</b> untuk memuat 17 kategori standar SNI beserta item contohnya.</p>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex gap-4">
+                        <div class="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
+                        <div>
+                            <h4 class="font-bold text-slate-900 text-sm">Gunakan Kalkulator Ahli</h4>
+                            <p class="text-slate-600 mt-1">Jika bingung menghitung volume dinding, beton, atau keramik, gunakan menu <b class="text-slate-900">Kalkulator Ahli Konstruksi</b> lalu kirim hasilnya langsung ke item RAB.</p>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex gap-4">
+                        <div class="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0">4</div>
+                        <div>
+                            <h4 class="font-bold text-slate-900 text-sm">Periksa Rekapitulasi & Ekspor</h4>
+                            <p class="text-slate-600 mt-1">Periksa bobot biaya, atur PPN 11% dan overhead kontraktor di menu <b class="text-slate-900">Rekapitulasi</b>, lalu unduh laporan lengkap dalam format Excel (.xlsx) atau PDF siap cetak.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODALS (Add Item, Category, Material, Export, etc.) -->
+    <!-- Add RAB Item Modal -->
+    <div id="modal-add-item" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                <h3 id="modal-item-title" class="font-bold text-slate-800 text-base">Tambah Item Pekerjaan RAB</h3>
+                <button onclick="closeModal('modal-add-item')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-item" onsubmit="saveRabItem(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="item-edit-id">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Kategori Pekerjaan *</label>
+                    <select id="item-cat" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500" required>
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Uraian Pekerjaan *</label>
+                    <input type="text" id="item-name" class="w-full p-2.5 border border-slate-300 rounded-xl" placeholder="Contoh: Galian Tanah Pondasi" required>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Spesifikasi Material</label>
+                    <input type="text" id="item-spec" class="w-full p-2.5 border border-slate-300 rounded-xl" placeholder="Contoh: Kedalaman 1.0 m">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Satuan *</label>
+                        <select id="item-unit" class="w-full p-2.5 border border-slate-300 rounded-xl" required>
+                            <option value="m3">m³ (Kubik)</option>
+                            <option value="m2">m² (Persegi)</option>
+                            <option value="m">m (Meter lari)</option>
+                            <option value="kg">kg (Kilogram)</option>
+                            <option value="ls">ls (Lump sum)</option>
+                            <option value="bh">bh (Buah / Unit)</option>
+                            <option value="titik">titik</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Volume *</label>
+                        <input type="number" step="0.01" id="item-vol" class="w-full p-2.5 border border-slate-300 rounded-xl" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Harga Satuan (Rp) *</label>
+                    <input type="number" id="item-price" class="w-full p-2.5 border border-slate-300 rounded-xl" required>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeModal('modal-add-item')" class="px-4 py-2 border border-slate-300 rounded-xl text-slate-700 font-semibold">Batal</button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow">Simpan Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Category Modal -->
+    <div id="modal-category" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                <h3 class="font-bold text-slate-800 text-base">Tambah Kategori RAB</h3>
+                <button type="button" onclick="closeModal('modal-category')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-category" onsubmit="saveCategory(event)" class="space-y-3 text-xs">
+                <div><label for="category-name" class="block font-semibold text-slate-700 mb-1">Nama Kategori *</label>
+                <input id="category-name" type="text" class="w-full p-2.5 border border-slate-300 rounded-xl" placeholder="Contoh: Pekerjaan Instalasi AC" required maxlength="100"></div>
+                <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeModal('modal-category')" class="px-4 py-2 border border-slate-300 rounded-xl text-slate-700 font-semibold">Batal</button><button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow">Simpan Kategori</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add AHSP Modal -->
+    <div id="modal-ahsp" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+      <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-slate-200 pb-3"><h3 class="font-bold text-slate-800">Tambah Analisis AHSP</h3><button type="button" onclick="closeModal('modal-ahsp')" class="text-slate-500"><i class="fa-solid fa-xmark"></i></button></div>
+        <form id="form-ahsp" onsubmit="saveAhsp(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div class="sm:col-span-2"><label class="block font-semibold mb-1">Nama Pekerjaan *</label><input id="ahsp-name" required maxlength="150" class="w-full p-2.5 border rounded-xl" placeholder="Contoh: Pekerjaan pasangan batako"></div>
+          <div><label class="block font-semibold mb-1">Kode AHSP</label><input id="ahsp-code" class="w-full p-2.5 border rounded-xl" placeholder="AHSP-001"></div>
+          <div><label class="block font-semibold mb-1">Satuan *</label><select id="ahsp-unit" class="w-full p-2.5 border rounded-xl"><option>m2</option><option>m3</option><option>m</option><option>kg</option><option>bh</option><option>titik</option><option>ls</option></select></div>
+          <div><label class="block font-semibold mb-1">Biaya Material (Rp)</label><input id="ahsp-mat" type="number" min="0" value="0" required class="w-full p-2.5 border rounded-xl"></div>
+          <div><label class="block font-semibold mb-1">Biaya Upah (Rp)</label><input id="ahsp-labor" type="number" min="0" value="0" required class="w-full p-2.5 border rounded-xl"></div>
+          <div><label class="block font-semibold mb-1">Biaya Peralatan (Rp)</label><input id="ahsp-equip" type="number" min="0" value="0" required class="w-full p-2.5 border rounded-xl"></div>
+          <div class="sm:col-span-2 flex justify-end gap-2 pt-2"><button type="button" onclick="closeModal('modal-ahsp')" class="px-4 py-2 border rounded-xl">Batal</button><button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-xl font-semibold">Simpan AHSP</button></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Export Options Modal -->
+    <div id="modal-export" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                <h3 class="font-bold text-slate-800 text-base"><i class="fa-solid fa-download text-emerald-600 mr-2"></i> Ekspor Laporan RAB Proyek</h3>
+                <button onclick="closeModal('modal-export')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-slate-500">Pilih format dokumen laporan RAB untuk diunduh langsung ke perangkat Anda.</p>
+            <div class="space-y-3 pt-2">
+                <button onclick="exportToExcel()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-3.5 rounded-xl font-semibold text-xs flex items-center justify-between shadow transition">
+                    <span class="flex items-center gap-2"><i class="fa-solid fa-file-excel text-lg"></i> Unduh Microsoft Excel (.xlsx)</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <button onclick="exportToPDF()" class="w-full bg-slate-900 hover:bg-slate-800 text-white p-3.5 rounded-xl font-semibold text-xs flex items-center justify-between shadow transition">
+                    <span class="flex items-center gap-2"><i class="fa-solid fa-file-pdf text-lg text-rose-400"></i> Unduh Laporan PDF Siap Cetak</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let appData = {
+            project: {
+                name: "Rumah Tinggal Modern 2 Lantai",
+                owner: "Bpk. H. Ahmad Fauzi",
+                location: "Kabupaten Sleman, D.I. Yogyakarta / Jawa Tengah",
+                contractor: "PT. Rekadaya Konstruksi Utama",
+                date: new Date().toISOString().split('T')[0],
+                docNo: "RAB/2026/III/042",
+                type: "Bangunan Baru",
+                floors: 2,
+                landarea: 150,
+                buildingarea: 180,
+                notes: "Spesifikasi standar premium, fondasi lajur batu kali dan kolom struktur bertulang beton K-225."
+            },
+            categories: [
+                { id: "A", name: "A. Pekerjaan Persiapan" },
+                { id: "B", name: "B. Pekerjaan Tanah dan Galian" },
+                { id: "C", name: "C. Pekerjaan Pondasi" },
+                { id: "D", name: "D. Pekerjaan Beton Bertulang dan Struktur" },
+                { id: "E", name: "E. Pekerjaan Pasangan Dinding" },
+                { id: "F", name: "F. Pekerjaan Plesteran dan Acian" },
+                { id: "G", name: "G. Pekerjaan Lantai dan Keramik" },
+                { id: "H", name: "H. Pekerjaan Kusen, Pintu, dan Jendela" },
+                { id: "I", name: "I. Pekerjaan Rangka dan Penutup Atap" },
+                { id: "J", name: "J. Pekerjaan Plafon" },
+                { id: "K", name: "K. Pekerjaan Pengecatan" },
+                { id: "L", name: "L. Pekerjaan Sanitasi dan Plumbing" },
+                { id: "M", name: "M. Pekerjaan Instalasi Listrik" },
+                { id: "N", name: "N. Pekerjaan Tangga dan Railing" },
+                { id: "O", name: "O. Pekerjaan Fasad dan Finishing" },
+                { id: "P", name: "P. Pekerjaan Luar Bangunan / Carport" },
+                { id: "Q", name: "Q. Pekerjaan Lain-lain" }
+            ],
+            items: [
+                { id: 1, catId: "A", name: "Pembersihan Lapangan & Perataan", spec: "Manual & Buang puing", unit: "m2", vol: 150, price: 25000 },
+                { id: 2, catId: "A", name: "Pembuatan Direksi Keet & Gudang", spec: "Kayu sederhana, triplek", unit: "ls", vol: 1, price: 3500000 },
+                { id: 3, catId: "B", name: "Galian Tanah Pondasi", spec: "Kedalaman 1.0 meter", unit: "m3", vol: 45, price: 85000 },
+                { id: 4, catId: "C", name: "Pasangan Pondasi Batu Kali", spec: "Spesi 1:4", unit: "m3", vol: 32, price: 420000 },
+                { id: 5, catId: "D", name: "Beton Bertulang Sloof 15/20", spec: "Mutu K-225, Besi Ø12", unit: "m3", vol: 6.5, price: 3100000 },
+                { id: 6, catId: "D", name: "Beton Bertulang Kolom 15/25", spec: "Mutu K-225", unit: "m3", vol: 8.2, price: 3300000 },
+                { id: 7, catId: "E", name: "Pasangan Dinding Bata Ringan (Hebel)", spec: "Tebal 7.5 cm + Mortar", unit: "m2", vol: 240, price: 145000 },
+                { id: 8, catId: "F", name: "Plesteran & Acian Dinding", spec: "Campuran 1:4", unit: "m2", vol: 480, price: 65000 },
+                { id: 9, catId: "G", name: "Pasangan Keramik Lantai 60x60", spec: "Granit Polished Homogeneous", unit: "m2", vol: 160, price: 280000 },
+                { id: 10, catId: "H", name: "Kusen, Pintu & Jendela Aluminium", spec: "Aluminium 4 inch Alexindo", unit: "bh", vol: 18, price: 1250000 },
+                { id: 11, catId: "I", name: "Rangka Atap Baja Ringan & Genteng", spec: "Truss C75 + Genteng Keramik", unit: "m2", vol: 110, price: 290000 },
+                { id: 12, catId: "J", name: "Pemasangan Plafon Gypsum 9mm", spec: "Rangka Hollow Galvanis", unit: "m2", vol: 180, price: 95000 },
+                { id: 13, catId: "K", name: "Pengecatan Dinding & Plafon", spec: "Cat Interior Dulux / Jotun", unit: "m2", vol: 480, price: 45000 },
+                { id: 14, catId: "L", name: "Instalasi Sanitasi & Pipa PVC", spec: "Pipa Wavin / Rucika AW", unit: "ls", vol: 1, price: 6500000 },
+                { id: 15, catId: "M", name: "Instalasi Titik Lampu & Stopkontak", spec: "Kabel Eterna NYM 3x2.5", unit: "titik", vol: 42, price: 220000 },
+                { id: 16, catId: "N", name: "Railing Tangga Besi Hollow", spec: "Handrail kayu jati + hollow", unit: "m", vol: 12, price: 650000 },
+                { id: 17, catId: "P", name: "Pekerjaan Carport & Paving Block", spec: "Paving K-300 tebal 6cm", unit: "m2", vol: 28, price: 175000 }
+            ],
+            materials: [
+                { id: 1, name: "Semen Portland (PCC)", spec: "Gresik / Holcim 50kg", unit: "sak", price: 58000, status: "Terverifikasi Jateng", source: "Toko Bahan Solo (Mar 2026)" },
+                { id: 2, name: "Pasir Pasang", spec: "Kualitas Lumayan / Merapi", unit: "m3", price: 275000, status: "Terverifikasi Jateng", source: "Depo Material Klaten" },
+                { id: 3, name: "Batu Pecah (Split 2/3)", spec: "Beton Cor", unit: "m3", price: 310000, status: "Terverifikasi Jateng", source: "Quarry Merapi" },
+                { id: 4, name: "Bata Ringan (Hebel)", spec: "Tebal 7.5 x 20 x 60 cm", unit: "m3", price: 750000, status: "SIMULASI", source: "Standar Katalog Pabrik" },
+                { id: 5, name: "Besi Beton Ø 12 mm", spec: "SNI Polos / Ulir (Perbatang 12m)", unit: "batang", price: 112000, status: "Terverifikasi Jateng", source: "Distributor Besi Semarang" },
+                { id: 6, name: "Keramik Lantai 60x60", spec: "Granit Glazed Polished", unit: "m2", price: 145000, status: "Terverifikasi Jateng", source: "Depo Keramik" }
+            ],
+            wages: [
+                { id: 1, name: "Pekerja / Buruh Tak Terlatih", unit: "HOK", wage: 110000, note: "Standar UMR Kabupaten Jateng" },
+                { id: 2, name: "Tukang Batu / Kayu / Besi", unit: "HOK", wage: 145000, note: "Berpengalaman" },
+                { id: 3, name: "Kepala Tukang", unit: "HOK", wage: 170000, note: "Pengawas Lapangan" },
+                { id: 4, name: "Mandor", unit: "HOK", wage: 185000, note: "Penanggung Jawab Harian" }
+            ],
+            ahsp: [
+                { id: 1, code: "A.2.1.1", name: "Galian Tanah Biasa Kedalaman 1 Meter", unit: "m3", matCost: 0, laborCost: 75000, equipCost: 0 },
+                { id: 2, code: "A.3.2.1.2", name: "Beton Mutu K-225 (Sloof/Kolom)", unit: "m3", matCost: 2450000, laborCost: 550000, equipCost: 100000 },
+                { id: 3, code: "A.4.4.1.9", name: "Pasangan Dinding Bata Ringan 7.5cm", unit: "m2", matCost: 115000, laborCost: 30000, equipCost: 0 }
+            ],
+            recapSettings: {
+                overheadPct: 10,
+                taxEnabled: true,
+                rounding: "thousand"
+            }
+        };
+
+        function saveToStorage() {
+            try {
+                localStorage.setItem('rab_pro_data_v2', JSON.stringify(appData));
+            } catch (e) {
+                console.error("Storage error:", e);
+            }
+        }
+
+        function loadFromStorage() {
+            const saved = localStorage.getItem('rab_pro_data_v2');
+            if (saved) {
+                try {
+                    appData = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Parse error:", e);
+                }
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-emerald-600', 'text-white');
+                btn.classList.add('bg-slate-800', 'text-slate-300');
+            });
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-slate-800', 'text-slate-300');
+                activeBtn.classList.add('bg-emerald-600', 'text-white');
+            }
+            refreshAllViews();
+        }
+
+        function switchDbTab(sub) {
+            if (sub === 'material') {
+                document.getElementById('db-content-material').classList.remove('hidden');
+                document.getElementById('db-content-wage').classList.add('hidden');
+                document.getElementById('btn-db-mat').className = "px-4 py-2 border-b-2 border-emerald-600 text-emerald-600 focus:outline-none";
+                document.getElementById('btn-db-wage').className = "px-4 py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700 focus:outline-none";
+            } else {
+                document.getElementById('db-content-material').classList.add('hidden');
+                document.getElementById('db-content-wage').classList.remove('hidden');
+                document.getElementById('btn-db-mat').className = "px-4 py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700 focus:outline-none";
+                document.getElementById('btn-db-wage').className = "px-4 py-2 border-b-2 border-emerald-600 text-emerald-600 focus:outline-none";
+            }
+        }
+
+        function calcNum(id) {
+            const el = document.getElementById(id);
+            return el ? (parseFloat(el.value) || 0) : 0;
+        }
+
+        function calcMeters(id) {
+            const value = calcNum(id);
+            const unit = document.getElementById(id + '-unit')?.value || 'm';
+            if (unit === 'cm') return value / 100;
+            if (unit === 'mm') return value / 1000;
+            return value;
+        }
+
+        function getCalcVolume(type) {
+            let value = 0;
+            if (type === 'brick') value = Math.max(0, calcMeters('bc-len') * calcMeters('bc-hei'));
+            if (type === 'concrete') value = Math.max(0, calcMeters('cc-len') * calcMeters('cc-wid') * calcMeters('cc-hei') * calcNum('cc-qty'));
+            if (type === 'ceramic') value = Math.max(0, calcMeters('cer-len') * calcMeters('cer-wid') * calcNum('cer-waste'));
+            if (type === 'paint') value = Math.max(0, calcMeters('pt-perim') * calcMeters('pt-hei'));
+            if (type === 'rebar') {
+                const dia = calcNum('rb-dia');
+                const qty = calcNum('rb-qty');
+                const waste = calcNum('rb-wast');
+                const kgPerMeter = {8: 0.395, 10: 0.617, 12: 0.888, 16: 1.578}[dia] || 0;
+                value = Math.max(0, qty * 12 * kgPerMeter * (1 + waste / 100));
+            }
+            return Math.round(value * 100) / 100;
+        }
+
+        function updateExpertCalculators() {
+            const brickArea = getCalcVolume('brick');
+            const brickType = document.getElementById('bc-type')?.value || 'bata_ringan';
+            const brickTypeCount = { bata_ringan: 8.5, bata_merah_1pc_5ps: 70, batako: 12.5 };
+            const brickCount = Math.ceil(brickArea * (brickTypeCount[brickType] || 70));
+            const thickVal = calcNum('bc-thick');
+            const thickUnit = document.getElementById('bc-thick-unit')?.value || 'cm';
+            const thickM = thickUnit === 'mm' ? thickVal / 1000 : thickUnit === 'cm' ? thickVal / 100 : thickVal;
+            const mortar = brickArea * thickM * 0.12;
+            const bcTitle = document.getElementById('bc-result-title');
+            const bcDetail = document.getElementById('bc-result-detail');
+            if (bcTitle) bcTitle.textContent = `Hasil: Luas ${brickArea.toLocaleString('id-ID')} m²`;
+            if (bcDetail) bcDetail.textContent = `Estimasi: ${brickCount.toLocaleString('id-ID')} buah ${brickType === 'bata_ringan' ? 'bata ringan' : brickType === 'batako' ? 'batako' : 'bata merah'}; ketebalan ${thickM.toLocaleString('id-ID', {maximumFractionDigits:3})} m; mortar perkiraan ${mortar.toLocaleString('id-ID', {maximumFractionDigits:2})} m³`;
+
+            const concrete = getCalcVolume('concrete');
+            const cc = document.getElementById('cc-result-title');
+            if (cc) cc.textContent = `Hasil Volume: ${concrete.toLocaleString('id-ID', {maximumFractionDigits:2})} m³`;
+
+            const ceramicNet = Math.max(0, calcMeters('cer-len') * calcMeters('cer-wid'));
+            const ceramic = getCalcVolume('ceramic');
+            const cer = document.getElementById('cer-result-title');
+            if (cer) cer.textContent = `Luas Bersih: ${ceramicNet.toLocaleString('id-ID', {maximumFractionDigits:2})} m² | Termasuk Waste: ${ceramic.toLocaleString('id-ID', {maximumFractionDigits:2})} m²`;
+
+            const paint = getCalcVolume('paint');
+            const pt = document.getElementById('pt-result-title');
+            if (pt) pt.textContent = `Luas Pengecatan: ${paint.toLocaleString('id-ID', {maximumFractionDigits:2})} m²`;
+
+            const rebar = getCalcVolume('rebar');
+            const rb = document.getElementById('rb-result-title');
+            if (rb) rb.textContent = `Estimasi Berat Total: ${rebar.toLocaleString('id-ID', {maximumFractionDigits:2})} kg`;
+        }
+
+        function initExpertCalculators() {
+            const ids = ['bc-len','bc-len-unit','bc-hei','bc-hei-unit','bc-type','bc-thick','bc-thick-unit','cc-len','cc-len-unit','cc-wid','cc-wid-unit','cc-hei','cc-hei-unit','cc-qty','cer-len','cer-len-unit','cer-wid','cer-wid-unit','cer-waste','pt-perim','pt-perim-unit','pt-hei','pt-hei-unit','pt-coats','rb-dia','rb-qty','rb-wast'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && !el.dataset.calcBound) {
+                    el.addEventListener('input', updateExpertCalculators);
+                    el.addEventListener('change', updateExpertCalculators);
+                    el.dataset.calcBound = 'true';
+                }
+            });
+            updateExpertCalculators();
+        }
+
+        function switchCalc(calcName) {
+            document.querySelectorAll('.calc-panel').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('#tab-calc button[id^="btn-calc-"]').forEach(btn => {
+                btn.className = "px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 transition";
+            });
+            document.getElementById(`calculator-${calcName}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`btn-calc-${calcName}`);
+            if (activeBtn) {
+                activeBtn.className = "px-3 py-2 text-xs font-semibold rounded-xl bg-emerald-600 text-white transition";
+            }
+        }
+
+        function formatIDR(num) {
+            return "Rp " + Number(num).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+        }
+
+        function showToast(title, msg, isError = false) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-msg').innerText = msg;
+            const icon = document.getElementById('toast-icon');
+            if (isError) {
+                icon.className = "fa-solid fa-circle-exclamation text-rose-400 text-lg";
+            } else {
+                icon.className = "fa-solid fa-circle-check text-emerald-400 text-lg";
+            }
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3500);
+        }
+
+        function refreshAllViews() {
+            renderDashboard();
+            renderProjectForm();
+            renderCategoryDropdowns();
+            renderRabTable();
+            renderMaterialTable();
+            renderWageTable();
+            renderAhspList();
+            calculateRecap();
+        }
+
+        function renderDashboard() {
+            document.getElementById('dash-project-name').innerText = appData.project.name;
+            document.getElementById('dash-project-location').innerHTML = `<i class="fa-solid fa-location-dot mr-1"></i> Lokasi: ${appData.project.location} | Pemilik: ${appData.project.owner}`;
+
+            let totalCost = 0;
+            let totalMat = 0;
+            appData.items.forEach(item => {
+                totalCost += (item.vol * item.price);
+            });
+            totalMat = totalCost * 0.65; // Estimated material ratio
+            let totalLabor = totalCost * 0.35;
+
+            document.getElementById('dash-total-cost').innerText = formatIDR(totalCost);
+            document.getElementById('dash-total-items').innerText = `${appData.items.length} Item`;
+            document.getElementById('dash-total-material').innerText = formatIDR(totalMat);
+            document.getElementById('dash-total-labor').innerText = formatIDR(totalLabor);
+
+            const bArea = parseFloat(appData.project.buildingarea) || 1;
+            document.getElementById('dash-cost-m2').innerText = `${formatIDR(totalCost / bArea)} / m² bangunan`;
+
+            // Category summary table in dashboard
+            let catSummaryHtml = "";
+            appData.categories.forEach(cat => {
+                let catTotal = 0;
+                appData.items.filter(i => i.catId === cat.id).forEach(i => { catTotal += (i.vol * i.price); });
+                if (catTotal > 0) {
+                    let pct = totalCost > 0 ? ((catTotal / totalCost) * 100).toFixed(1) : 0;
+                    catSummaryHtml += `
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-semibold text-slate-800">${cat.name}</td>
+                            <td class="p-3 text-right font-medium">${formatIDR(catTotal)}</td>
+                            <td class="p-3 text-right text-slate-500">${pct}%</td>
+                        </tr>
+                    `;
+                }
+            });
+            document.getElementById('dash-category-summary').innerHTML = catSummaryHtml || `<tr><td colspan="3" class="p-4 text-center text-slate-400">Belum ada item pekerjaan.</td></tr>`;
+        }
+
+        function renderProjectForm() {
+            document.getElementById('p-name').value = appData.project.name || '';
+            document.getElementById('p-owner').value = appData.project.owner || '';
+            document.getElementById('p-location').value = appData.project.location || '';
+            document.getElementById('p-contractor').value = appData.project.contractor || '';
+            document.getElementById('p-date').value = appData.project.date || '';
+            document.getElementById('p-docno').value = appData.project.docNo || '';
+            document.getElementById('p-type').value = appData.project.type || 'Bangunan Baru';
+            document.getElementById('p-floors').value = appData.project.floors || 2;
+            document.getElementById('p-landarea').value = appData.project.landarea || '';
+            document.getElementById('p-buildingarea').value = appData.project.buildingarea || '';
+            document.getElementById('p-notes').value = appData.project.notes || '';
+        }
+
+        function saveProjectData(e) {
+            e.preventDefault();
+            appData.project = {
+                name: document.getElementById('p-name').value,
+                owner: document.getElementById('p-owner').value,
+                location: document.getElementById('p-location').value,
+                contractor: document.getElementById('p-contractor').value,
+                date: document.getElementById('p-date').value,
+                docNo: document.getElementById('p-docno').value,
+                type: document.getElementById('p-type').value,
+                floors: parseInt(document.getElementById('p-floors').value),
+                landarea: parseFloat(document.getElementById('p-landarea').value) || 0,
+                buildingarea: parseFloat(document.getElementById('p-buildingarea').value) || 1,
+                notes: document.getElementById('p-notes').value
+            };
+            saveToStorage();
+            showToast("Sukses", "Data identitas proyek berhasil disimpan.");
+            refreshAllViews();
+        }
+
+        function openCategoryModal() {
+            const modal = document.getElementById('modal-category');
+            const input = document.getElementById('category-name');
+            if (!modal || !input) { showToast("Gagal", "Form kategori tidak ditemukan.", true); return; }
+            input.value = '';
+            modal.classList.remove('hidden');
+            setTimeout(() => input.focus(), 50);
+        }
+
+        function saveCategory(event) {
+            event.preventDefault();
+            const name = (document.getElementById('category-name')?.value || '').trim();
+            if (!name) { showToast("Periksa input", "Nama kategori wajib diisi.", true); return; }
+            if (appData.categories.some(c => String(c.name).trim().toLowerCase() === name.toLowerCase())) {
+                showToast("Kategori sudah ada", "Gunakan nama kategori yang berbeda.", true); return;
+            }
+            const id = 'KAT-' + Date.now();
+            appData.categories.push({ id, name });
+            saveToStorage(); refreshAllViews(); closeModal('modal-category');
+            showToast("Sukses", "Kategori baru berhasil ditambahkan.");
+        }
+
+        function renderCategoryDropdowns() {
+            let catSelect = document.getElementById('item-cat');
+            let filterSelect = document.getElementById('rab-filter-cat');
+
+            let catOpts = "";
+            let filterOpts = `<option value="ALL">Semua Kategori (17 SNI)</option>`;
+
+            appData.categories.forEach(c => {
+                catOpts += `<option value="${c.id}">${c.name}</option>`;
+                filterOpts += `<option value="${c.id}">${c.name}</option>`;
+            });
+
+            if(catSelect) catSelect.innerHTML = catOpts;
+            if(filterSelect) filterSelect.innerHTML = filterOpts;
+        }
+
+        function renderRabTable() {
+            const tbody = document.getElementById('rab-table-body');
+            const search = document.getElementById('rab-search').value.toLowerCase();
+            const filterCat = document.getElementById('rab-filter-cat').value;
+
+            let html = "";
+            let grandTotal = 0;
+
+            appData.categories.forEach(cat => {
+                if (filterCat !== 'ALL' && filterCat !== cat.id) return;
+                const catItems = appData.items.filter(i => i.catId === cat.id && i.name.toLowerCase().includes(search));
+                // Tampilkan kategori kosong juga agar kategori baru langsung terlihat.
+
+                // Category header row
+                html += `
+                    <tr class="bg-slate-100 font-bold text-slate-800 border-t-2 border-slate-300">
+                        <td colspan="7" class="p-3"><i class="fa-solid fa-folder-open text-emerald-600 mr-2"></i> ${cat.name}</td>
+                    </tr>
+                `;
+
+                catItems.forEach((item, index) => {
+                    let total = item.vol * item.price;
+                    grandTotal += total;
+                    html += `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3 text-center text-slate-500 font-medium">${index + 1}</td>
+                            <td class="p-3">
+                                <div class="font-bold text-slate-900">${item.name}</div>
+                                <div class="text-slate-500 text-[11px]">${item.spec || '-'}</div>
+                            </td>
+                            <td class="p-3 text-center font-medium">${item.unit}</td>
+                            <td class="p-3 text-right font-medium">${item.vol.toLocaleString('id-ID')}</td>
+                            <td class="p-3 text-right">${formatIDR(item.price)}</td>
+                            <td class="p-3 text-right font-bold text-slate-900">${formatIDR(total)}</td>
+                            <td class="p-3 text-center space-x-1">
+                                <button onclick="editRabItem(${item.id})" class="text-blue-600 hover:text-blue-800 p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button onclick="deleteRabItem(${item.id})" class="text-rose-600 hover:text-rose-800 p-1" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+
+            tbody.innerHTML = html || `<tr><td colspan="7" class="p-8 text-center text-slate-400">Tidak ada item pekerjaan ditemukan.</td></tr>`;
+            renderRabTotals();
+        }
+
+        function getRabTotals() {
+            const subtotal = appData.items.reduce((sum, item) => sum + (Number(item.vol) || 0) * (Number(item.price) || 0), 0);
+            const input = document.getElementById('rab-discount-amount');
+            const discount = Math.min(subtotal, Math.max(0, Number(input?.value) || 0));
+            const percent = subtotal > 0 ? discount / subtotal * 100 : 0;
+            return { subtotal, discount, percent, total: subtotal - discount };
+        }
+
+        function renderRabTotals() {
+            const { subtotal, discount, percent, total } = getRabTotals();
+            const sub = document.getElementById('rab-subtotal'); if (sub) sub.textContent = formatIDR(subtotal);
+            const row = document.getElementById('rab-discount-row');
+            if (row) row.classList.toggle('hidden', !(discount > 0));
+            const label = document.getElementById('rab-discount-label'); if (label) label.textContent = `Diskon (${percent.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%)`;
+            const val = document.getElementById('rab-discount-value'); if (val) val.textContent = '- ' + formatIDR(discount);
+            const grand = document.getElementById('rab-grand-total'); if (grand) grand.textContent = formatIDR(total);
+        }
+
+        function openAddItemModal() {
+            document.getElementById('modal-item-title').innerText = "Tambah Item Pekerjaan RAB";
+            document.getElementById('item-edit-id').value = "";
+            document.getElementById('form-item').reset();
+            document.getElementById('modal-add-item').classList.remove('hidden');
+        }
+
+        function editRabItem(id) {
+            const item = appData.items.find(i => i.id === id);
+            if (!item) return;
+            document.getElementById('modal-item-title').innerText = "Edit Item Pekerjaan RAB";
+            document.getElementById('item-edit-id').value = item.id;
+            document.getElementById('item-cat').value = item.catId;
+            document.getElementById('item-name').value = item.name;
+            document.getElementById('item-spec').value = item.spec;
+            document.getElementById('item-unit').value = item.unit;
+            document.getElementById('item-vol').value = item.vol;
+            document.getElementById('item-price').value = item.price;
+            document.getElementById('modal-add-item').classList.remove('hidden');
+        }
+
+        function saveRabItem(e) {
+            e.preventDefault();
+            const editId = document.getElementById('item-edit-id').value;
+            const newItem = {
+                id: editId ? parseInt(editId) : (appData.items.length > 0 ? Math.max(...appData.items.map(i => i.id)) + 1 : 1),
+                catId: document.getElementById('item-cat').value,
+                name: document.getElementById('item-name').value,
+                spec: document.getElementById('item-spec').value,
+                unit: document.getElementById('item-unit').value,
+                vol: parseFloat(document.getElementById('item-vol').value) || 0,
+                price: parseFloat(document.getElementById('item-price').value) || 0
+            };
+
+            if (editId) {
+                const idx = appData.items.findIndex(i => i.id === parseInt(editId));
+                if (idx !== -1) appData.items[idx] = newItem;
+                showToast("Berhasil", "Item pekerjaan berhasil diperbarui.");
+            } else {
+                appData.items.push(newItem);
+                showToast("Berhasil", "Item pekerjaan baru berhasil ditambahkan.");
+            }
+
+            saveToStorage();
+            closeModal('modal-add-item');
+            refreshAllViews();
+        }
+
+        function deleteRabItem(id) {
+            if (confirm("Apakah Anda yakin ingin menghapus item pekerjaan ini?")) {
+                appData.items = appData.items.filter(i => i.id !== id);
+                saveToStorage();
+                showToast("Terhapus", "Item pekerjaan telah dihapus.");
+                refreshAllViews();
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function renderMaterialTable() {
+            const tbody = document.getElementById('material-table-body');
+            let html = "";
+            appData.materials.forEach(m => {
+                html += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-bold text-slate-900">${m.name}</td>
+                        <td class="p-3 text-slate-600">${m.spec}</td>
+                        <td class="p-3 text-center">${m.unit}</td>
+                        <td class="p-3 text-right font-semibold">${formatIDR(m.price)}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${m.status === 'SIMULASI' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${m.status}</span>
+                            <div class="text-[10px] text-slate-400 mt-0.5">${m.source}</div>
+                        </td>
+                        <td class="p-3 text-center">
+                            <button onclick="deleteMaterial(${m.id})" class="text-rose-600 hover:text-rose-800 p-1" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function renderWageTable() {
+            const tbody = document.getElementById('wage-table-body');
+            let html = "";
+            appData.wages.forEach(w => {
+                html += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-bold text-slate-900">${w.name}</td>
+                        <td class="p-3 text-center">${w.unit}</td>
+                        <td class="p-3 text-right font-semibold">${formatIDR(w.wage)}</td>
+                        <td class="p-3 text-slate-500">${w.note}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="deleteWage(${w.id})" class="text-rose-600 hover:text-rose-800 p-1" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function deleteMaterial(id) {
+            appData.materials = appData.materials.filter(m => m.id !== id);
+            saveToStorage();
+            renderMaterialTable();
+            showToast("Sukses", "Material dihapus dari database.");
+        }
+
+        function deleteWage(id) {
+            appData.wages = appData.wages.filter(w => w.id !== id);
+            saveToStorage();
+            renderWageTable();
+            showToast("Sukses", "Upah dihapus dari database.");
+        }
+
+        function openAhspModal() {
+            const form = document.getElementById('form-ahsp');
+            if (!form) { showToast('Gagal', 'Form AHSP tidak ditemukan.', true); return; }
+            form.reset(); document.getElementById('ahsp-mat').value = 0; document.getElementById('ahsp-labor').value = 0; document.getElementById('ahsp-equip').value = 0;
+            document.getElementById('modal-ahsp').classList.remove('hidden');
+            setTimeout(() => document.getElementById('ahsp-name').focus(), 50);
+        }
+
+        function saveAhsp(event) {
+            event.preventDefault();
+            const name = document.getElementById('ahsp-name').value.trim();
+            if (!name) { showToast('Periksa input', 'Nama pekerjaan wajib diisi.', true); return; }
+            const nextId = appData.ahsp.reduce((m, a) => Math.max(m, Number(a.id) || 0), 0) + 1;
+            appData.ahsp.push({ id: nextId, code: document.getElementById('ahsp-code').value.trim() || `AHSP-${String(nextId).padStart(3,'0')}`, name, unit: document.getElementById('ahsp-unit').value, matCost: Math.max(0, Number(document.getElementById('ahsp-mat').value) || 0), laborCost: Math.max(0, Number(document.getElementById('ahsp-labor').value) || 0), equipCost: Math.max(0, Number(document.getElementById('ahsp-equip').value) || 0) });
+            saveToStorage(); window.selectedAhspId = nextId; renderAhspList(); selectAhsp(nextId); closeModal('modal-ahsp'); showToast('Sukses', 'Analisis AHSP berhasil ditambahkan.');
+        }
+
+        function renderAhspList() {
+            const container = document.getElementById('ahsp-list-container');
+            let html = "";
+            appData.ahsp.forEach((a, index) => {
+                let unitTotal = a.matCost + a.laborCost + a.equipCost;
+                html += `
+                    <div onclick="selectAhsp(${a.id})" class="p-3 bg-white hover:bg-emerald-50 border border-slate-200 rounded-xl cursor-pointer transition shadow-sm">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded">${a.code}</span>
+                            <span class="text-xs font-bold text-slate-900">${formatIDR(unitTotal)} / ${a.unit}</span>
+                        </div>
+                        <h4 class="font-bold text-slate-800 text-xs mt-1.5">${a.name}</h4>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            if (appData.ahsp.length > 0 && !window.selectedAhspId) {
+                selectAhsp(appData.ahsp[0].id);
+            }
+        }
+
+        function selectAhsp(id) {
+            window.selectedAhspId = id;
+            const a = appData.ahsp.find(item => item.id === id);
+            if (!a) return;
+            let unitTotal = a.matCost + a.laborCost + a.equipCost;
+
+            const panel = document.getElementById('ahsp-detail-panel');
+            panel.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex justify-between items-start border-b border-slate-200 pb-3">
+                        <div>
+                            <span class="text-xs font-bold text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-full">${a.code}</span>
+                            <h3 class="font-bold text-slate-900 text-base mt-2">${a.name}</h3>
+                            <p class="text-xs text-slate-500">Satuan Output: 1 ${a.unit}</p>
+                        </div>
+                        <button onclick="deleteAhsp(${a.id})" class="text-rose-600 hover:text-rose-800 text-xs"><i class="fa-solid fa-trash mr-1"></i> Hapus AHSP</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="bg-white p-3.5 rounded-xl border border-slate-200">
+                            <p class="text-[11px] text-slate-500 uppercase font-semibold">Biaya Material</p>
+                            <p class="text-sm font-bold text-slate-900 mt-1">${formatIDR(a.matCost)}</p>
+                        </div>
+                        <div class="bg-white p-3.5 rounded-xl border border-slate-200">
+                            <p class="text-[11px] text-slate-500 uppercase font-semibold">Biaya Upah Kerja</p>
+                            <p class="text-sm font-bold text-slate-900 mt-1">${formatIDR(a.laborCost)}</p>
+                        </div>
+                        <div class="bg-white p-3.5 rounded-xl border border-slate-200">
+                            <p class="text-[11px] text-slate-500 uppercase font-semibold">Biaya Peralatan</p>
+                            <p class="text-sm font-bold text-slate-900 mt-1">${formatIDR(a.equipCost)}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center">
+                        <div>
+                            <p class="text-xs text-slate-400">Harga Satuan Pekerjaan Final (SNI)</p>
+                            <p class="text-lg font-extrabold text-emerald-400 mt-0.5">${formatIDR(unitTotal)} / ${a.unit}</p>
+                        </div>
+                        <button onclick="applyAhspToRab('${a.name}', ${unitTotal}, '${a.unit}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold transition shadow">
+                            <i class="fa-solid fa-paper-plane mr-1"></i> Gunakan di RAB
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function deleteAhsp(id) {
+            if (!confirm('Hapus analisis AHSP ini?')) return;
+            appData.ahsp = appData.ahsp.filter(a => Number(a.id) !== Number(id));
+            if (Number(window.selectedAhspId) === Number(id)) window.selectedAhspId = null;
+            saveToStorage();
+            renderAhspList();
+            const panel = document.getElementById('ahsp-detail-panel');
+            if (!appData.ahsp.length && panel) panel.innerHTML = '<div class="text-center py-16 text-slate-400">Belum ada analisis AHSP. Klik Tambah Analisis AHSP untuk membuatnya.</div>';
+            showToast('Sukses', 'Analisis AHSP langsung dihapus.');
+        }
+
+        function applyAhspToRab(name, price, unit) {
+            appData.items.push({
+                id: appData.items.length > 0 ? Math.max(...appData.items.map(i => i.id)) + 1 : 1,
+                catId: "D",
+                name: name,
+                spec: "Berdasarkan Analisis AHSP",
+                unit: unit,
+                vol: 10,
+                price: price
+            });
+            saveToStorage();
+            showToast("Sukses", `Item "${name}" berhasil ditambahkan ke RAB.`);
+            switchTab('rab');
+        }
+
+        function calculateRecap() {
+            let totalDirect = 0;
+            appData.items.forEach(i => {
+                totalDirect += (i.vol * i.price);
+            });
+
+            document.getElementById('recap-proj-subtitle').innerText = `Proyek: ${appData.project.name} | Lokasi: ${appData.project.location}`;
+            document.getElementById('recap-subtotal-direct').innerText = formatIDR(totalDirect);
+
+            let recapHtml = "";
+            let counter = 1;
+
+            appData.categories.forEach(cat => {
+                let catTotal = 0;
+                appData.items.filter(i => i.catId === cat.id).forEach(i => { catTotal += (i.vol * i.price); });
+                if (catTotal > 0 || appData.items.length > 0) {
+                    let weight = totalDirect > 0 ? ((catTotal / totalDirect) * 100).toFixed(2) : 0;
+                    recapHtml += `
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 text-center font-semibold text-slate-500">${counter++}</td>
+                            <td class="p-3 font-bold text-slate-900">${cat.name}</td>
+                            <td class="p-3 text-right font-medium">${formatIDR(catTotal)}</td>
+                            <td class="p-3 text-right text-slate-600">${weight}%</td>
+                        </tr>
+                    `;
+                }
+            });
+            document.getElementById('recap-table-body').innerHTML = recapHtml;
+
+            // Overhead & Tax Calculation
+            const overheadPct = parseFloat(document.getElementById('recap-overhead-pct').value) || 0;
+            const taxEnabled = document.getElementById('recap-tax-enabled').checked;
+            const rounding = document.getElementById('recap-rounding').value;
+
+            let overheadCost = totalDirect * (overheadPct / 100);
+            let subtotalWithOverhead = totalDirect + overheadCost;
+            let taxCost = taxEnabled ? (subtotalWithOverhead * 0.11) : 0;
+            let grandTotal = subtotalWithOverhead + taxCost;
+
+            if (rounding === 'thousand') {
+                grandTotal = Math.round(grandTotal / 1000) * 1000;
+            }
+
+            document.getElementById('recap-grand-total').innerText = formatIDR(grandTotal);
+            
+            const bArea = parseFloat(appData.project.buildingarea) || 1;
+            document.getElementById('recap-unit-cost').innerText = `${formatIDR(grandTotal / bArea)} / m²`;
+        }
+
+        function sendCalcToRab(catName, itemName, unit, vol) {
+            vol = Number(vol);
+            if (!Number.isFinite(vol) || vol <= 0) {
+                showToast("Volume belum valid", "Periksa kembali ukuran dan jumlah yang dimasukkan pada kalkulator.", true);
+                return;
+            }
+            const cat = appData.categories.find(c => c.name.toLowerCase().includes(catName.toLowerCase())) || appData.categories[0];
+            appData.items.push({
+                id: appData.items.length > 0 ? Math.max(...appData.items.map(i => i.id)) + 1 : 1,
+                catId: cat.id,
+                name: itemName,
+                spec: "Hasil Kalkulator Otomatis",
+                unit: unit,
+                vol: vol,
+                price: 125000 // default dummy price
+            });
+            saveToStorage();
+            refreshAllViews();
+            showToast("Sukses", `Volume ${vol.toLocaleString('id-ID')} ${unit} berhasil dikirim ke RAB (${cat.name}). Harga satuan default Rp 125.000 perlu diperiksa atau disesuaikan.`);
+            switchTab('rab');
+        }
+
+        function runAudit() {
+            let warnings = [];
+            let zeroPriceCount = 0;
+            let zeroVolCount = 0;
+
+            appData.items.forEach(i => {
+                if (i.price <= 0) zeroPriceCount++;
+                if (i.vol <= 0) zeroVolCount++;
+            });
+
+            const auditContainer = document.getElementById('audit-results');
+            let html = "";
+            if (zeroPriceCount > 0) {
+                html += `<div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-amber-600"></i><span>Terdapat ${zeroPriceCount} item dengan harga satuan Rp0.</span></div>`;
+            }
+            if (zeroVolCount > 0) {
+                html += `<div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-amber-600"></i><span>Terdapat ${zeroVolCount} item dengan volume nol.</span></div>`;
+            }
+            if (html === "") {
+                html = `<div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2"><i class="fa-solid fa-circle-check text-emerald-600"><span>Pemeriksaan selesai: Seluruh item valid, harga dan volume terisi dengan baik.</span></div>`;
+            }
+            auditContainer.innerHTML = html;
+            showToast("Audit Selesai", "Pemeriksaan RAB telah dijalankan.");
+        }
+
+        function loadTemplate(type) {
+            if (type === '1lantai') {
+                appData.project.name = "Rumah Tinggal Minimalis 1 Lantai";
+                appData.project.buildingarea = 70;
+                appData.project.floors = 1;
+            } else {
+                appData.project.name = "Rumah Tinggal Modern 2 Lantai";
+                appData.project.buildingarea = 180;
+                appData.project.floors = 2;
+            }
+            saveToStorage();
+            refreshAllViews();
+            showToast("Template Dimuat", `Template ${type === '1lantai' ? '1 Lantai' : '2 Lantai'} berhasil diterapkan.`);
+        }
+
+        function openExportModal() {
+            document.getElementById('modal-export').classList.remove('hidden');
+        }
+
+        function exportToExcel() {
+            try {
+                const wb = XLSX.utils.book_new();
+                const project = appData.project;
+                const safeName = (project.name || 'Proyek').replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '_');
+                const rows = [];
+                const categoryRows = [];
+                let no = 1;
+                let grandTotal = 0;
+
+                // Lembar utama disusun mengikuti struktur laporan PDF.
+                rows.push(["RENCANA ANGGARAN BIAYA (RAB) PROYEK", "", "", "", "", ""]);
+                rows.push([`Proyek: ${project.name || '-'}`, "", "", "", "", ""]);
+                rows.push([`Pemilik: ${project.owner || '-'} | Lokasi: ${project.location || '-'}`, "", "", "", "", ""]);
+                rows.push([`Tanggal: ${project.date || '-'} | Dokumen: ${project.docNo || '-'}`, "", "", "", "", ""]);
+                rows.push(["", "", "", "", "", ""]);
+                rows.push(["No", "Uraian Pekerjaan", "Sat", "Vol", "Harga Satuan (Rp)", "Total Harga (Rp)"]);
+
+                appData.categories.forEach(cat => {
+                    const catItems = appData.items.filter(item => item.catId === cat.id);
+                    if (!catItems.length) return;
+                    categoryRows.push(rows.length);
+                    rows.push([cat.name || 'Kategori', "", "", "", "", ""]);
+                    catItems.forEach(item => {
+                        const volume = Number(item.vol) || 0;
+                        const price = Number(item.price) || 0;
+                        const total = volume * price;
+                        grandTotal += total;
+                        rows.push([no++, item.name || '-', item.unit || '-', volume, price, total]);
+                    });
+                });
+
+                rows.push(["", "", "", "", "", ""]);
+                const totals = getRabTotals();
+                if (totals.discount > 0) rows.push([`Diskon (${totals.percent.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%)`, "", "", "", "", -totals.discount]);
+                const totalRow = rows.length;
+                rows.push(["TOTAL ESTIMASI AKHIR", "", "", "", "", totals.total]);
+
+                const ws = XLSX.utils.aoa_to_sheet(rows);
+                ws['!merges'] = [
+                    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+                    { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } },
+                    { s: { r: 2, c: 0 }, e: { r: 2, c: 5 } },
+                    { s: { r: 3, c: 0 }, e: { r: 3, c: 5 } },
+                    ...categoryRows.map(r => ({ s: { r, c: 0 }, e: { r, c: 5 } })),
+                    { s: { r: totalRow, c: 0 }, e: { r: totalRow, c: 4 } }
+                ];
+                ws['!cols'] = [
+                    { wch: 6 }, { wch: 42 }, { wch: 9 }, { wch: 13 }, { wch: 21 }, { wch: 22 }
+                ];
+                ws['!rows'] = rows.map((_, i) => ({ hpt: i === 0 ? 30 : (i === 5 ? 26 : 21) }));
+                ws['!autofilter'] = { ref: `A6:F${Math.max(6, rows.length - 2)}` };
+                ws['!pageSetup'] = { paperSize: 9, orientation: 'portrait', fitToWidth: 1, fitToHeight: 0 };
+                ws['!margins'] = { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 };
+                ws['!printOptions'] = { horizontalCentered: true };
+
+                const border = {
+                    top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                    bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+                    right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+                };
+                const styleCell = (addr, style) => {
+                    if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+                    ws[addr].s = style;
+                };
+                const lastRow = rows.length;
+                for (let r = 0; r < lastRow; r++) {
+                    for (let c = 0; c < 6; c++) {
+                        const addr = XLSX.utils.encode_cell({ r, c });
+                        styleCell(addr, { font: { name: 'Arial', sz: 10, color: { rgb: '334155' } }, alignment: { vertical: 'center' } });
+                    }
+                }
+                for (let c = 0; c < 6; c++) {
+                    styleCell(XLSX.utils.encode_cell({ r: 0, c }), {
+                        font: { name: 'Arial', sz: 16, bold: true, color: { rgb: '0F172A' } },
+                        alignment: { vertical: 'center', horizontal: 'left' },
+                        fill: { fgColor: { rgb: 'F1F5F9' } }
+                    });
+                    styleCell(XLSX.utils.encode_cell({ r: 5, c }), {
+                        font: { name: 'Arial', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { fgColor: { rgb: '0F172A' } },
+                        alignment: { vertical: 'center', horizontal: c === 1 ? 'left' : 'center', wrapText: true },
+                        border
+                    });
+                }
+                for (const r of categoryRows) {
+                    for (let c = 0; c < 6; c++) {
+                        styleCell(XLSX.utils.encode_cell({ r, c }), {
+                            font: { name: 'Arial', sz: 10, bold: true, color: { rgb: '0F172A' } },
+                            fill: { fgColor: { rgb: 'F1F5F9' } },
+                            alignment: { vertical: 'center', horizontal: 'left' },
+                            border
+                        });
+                    }
+                }
+                // Border, alignment, and Indonesian number formatting for detail rows.
+                for (let r = 6; r < lastRow - 2; r++) {
+                    if (categoryRows.includes(r)) continue;
+                    for (let c = 0; c < 6; c++) {
+                        const addr = XLSX.utils.encode_cell({ r, c });
+                        styleCell(addr, {
+                            font: { name: 'Arial', sz: 10, color: { rgb: '334155' } },
+                            alignment: { vertical: 'center', horizontal: [0, 2, 3, 4, 5].includes(c) ? 'center' : 'left', wrapText: c === 1 },
+                            border
+                        });
+                    }
+                    ['E', 'F'].forEach(col => {
+                        const cell = ws[`${col}${r + 1}`];
+                        if (cell) { cell.z = '"Rp" #,##0'; cell.s = { ...(cell.s || {}), alignment: { vertical: 'center', horizontal: 'center' } }; }
+                    });
+                    const volCell = ws[`D${r + 1}`];
+                    if (volCell) volCell.z = '#,##0.##';
+                }
+                for (let c = 0; c < 6; c++) {
+                    styleCell(XLSX.utils.encode_cell({ r: totalRow, c }), {
+                        font: { name: 'Arial', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill: { fgColor: { rgb: '0F172A' } },
+                        alignment: { vertical: 'center', horizontal: c === 5 ? 'center' : 'left' },
+                        border
+                    });
+                }
+                ws[`F${totalRow + 1}`].z = '"Rp" #,##0';
+                ws[`F${totalRow + 1}`].s = { ...(ws[`F${totalRow + 1}`].s || {}), alignment: { vertical: 'center', horizontal: 'center' } };
+                ws['!freeze'] = { xSplit: 0, ySplit: 6, topLeftCell: 'A7', activePane: 'bottomLeft', state: 'frozen' };
+                XLSX.utils.book_append_sheet(wb, ws, 'RAB');
+
+                // Lembar informasi proyek tetap disediakan sebagai referensi tambahan.
+                const projRows = [
+                    ['INFORMASI PROYEK RAB'],
+                    ['Nama Proyek', project.name || '-'],
+                    ['Pemilik Proyek', project.owner || '-'],
+                    ['Lokasi', project.location || '-'],
+                    ['Kontraktor', project.contractor || '-'],
+                    ['Tanggal', project.date || '-'],
+                    ['Nomor Dokumen', project.docNo || '-'],
+                    ['Luas Bangunan', `${project.buildingarea || 0} m²`]
+                ];
+                const wsProj = XLSX.utils.aoa_to_sheet(projRows);
+                wsProj['!cols'] = [{ wch: 24 }, { wch: 42 }];
+                wsProj['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+                for (let r = 0; r < projRows.length; r++) {
+                    for (let c = 0; c < 2; c++) {
+                        const cell = wsProj[XLSX.utils.encode_cell({ r, c })];
+                        if (cell) cell.s = r === 0
+                            ? { font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '0F172A' } }, alignment: { vertical: 'center' } }
+                            : { font: { sz: 10, color: { rgb: '334155' } }, border };
+                    }
+                }
+                XLSX.utils.book_append_sheet(wb, wsProj, 'Info Proyek');
+
+                const matRows = [['Nama Material', 'Spesifikasi', 'Satuan', 'Harga (Rp)', 'Status', 'Sumber']];
+                appData.materials.forEach(m => matRows.push([m.name, m.spec, m.unit, Number(m.price) || 0, m.status, m.source]));
+                const wsMat = XLSX.utils.aoa_to_sheet(matRows);
+                wsMat['!cols'] = [{ wch: 30 }, { wch: 32 }, { wch: 12 }, { wch: 18 }, { wch: 16 }, { wch: 30 }];
+                for (let c = 0; c < 6; c++) {
+                    const cell = wsMat[XLSX.utils.encode_cell({ r: 0, c })];
+                    if (cell) cell.s = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '0F172A' } }, alignment: { vertical: 'center', wrapText: true }, border };
+                }
+                for (let r = 1; r < matRows.length; r++) {
+                    const priceCell = wsMat[`D${r + 1}`];
+                    if (priceCell) { priceCell.z = '"Rp" #,##0'; priceCell.s = { border, alignment: { vertical: 'center', horizontal: 'center' } }; }
+                }
+                XLSX.utils.book_append_sheet(wb, wsMat, 'Database Material');
+
+                XLSX.writeFile(wb, `RAB_${safeName}.xlsx`);
+                closeModal('modal-export');
+                showToast('Sukses', 'Excel RAB berhasil diunduh dengan format laporan yang mengikuti PDF.');
+            } catch (err) {
+                console.error(err);
+                showToast('Gagal', 'Terjadi kesalahan saat mengekspor Excel: ' + err.message, true);
+            }
+        }
+
+        function exportToPDF() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+
+                doc.setFontSize(16);
+                doc.setTextColor(15, 23, 42);
+                doc.text("RENCANA ANGGARAN BIAYA (RAB) PROYEK", 14, 20);
+
+                doc.setFontSize(10);
+                doc.setTextColor(71, 85, 105);
+                doc.text(`Proyek: ${appData.project.name}`, 14, 28);
+                doc.text(`Pemilik: ${appData.project.owner} | Lokasi: ${appData.project.location}`, 14, 34);
+                doc.text(`Tanggal: ${appData.project.date} | Dokumen: ${appData.project.docNo}`, 14, 40);
+
+                let tableRows = [];
+                let no = 1;
+                let grandTotal = 0;
+
+                appData.categories.forEach(cat => {
+                    const catItems = appData.items.filter(i => i.catId === cat.id);
+                    if (catItems.length > 0) {
+                        tableRows.push([{ content: cat.name, colSpan: 6, styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }]);
+                        catItems.forEach(item => {
+                            let total = item.vol * item.price;
+                            grandTotal += total;
+                            tableRows.push([
+                                no++,
+                                item.name,
+                                item.unit,
+                                item.vol.toLocaleString('id-ID'),
+                                formatIDR(item.price),
+                                formatIDR(total)
+                            ]);
+                        });
+                    }
+                });
+
+                if (typeof doc.autoTable === 'function') {
+                    doc.autoTable({
+                        startY: 46,
+                        head: [['No', 'Uraian Pekerjaan', 'Sat', 'Vol', 'Harga Satuan', 'Total Harga']],
+                        body: tableRows,
+                        theme: 'grid',
+                        headStyles: { fillColor: [15, 23, 42] },
+                        styles: { fontSize: 8, cellPadding: 2.5 }
+                    });
+                } else {
+                    // Fallback table generation if autotable isn't attached
+                    let startY = 48;
+                    doc.setFontSize(9);
+                    tableRows.forEach(row => {
+                        if (startY > 270) { doc.addPage(); startY = 20; }
+                        if (row.colSpan) {
+                            doc.setFont("helvetica", "bold");
+                            doc.text(row[0].content, 14, startY);
+                            startY += 6;
+                            doc.setFont("helvetica", "normal");
+                        } else {
+                            doc.text(`${row[0]}. ${row[1]} (${row[3]} ${row[2]}) - ${row[5]}`, 14, startY);
+                            startY += 6;
+                        }
+                    });
+                }
+
+                let finalY = (typeof doc.lastAutoTable !== 'undefined' && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY + 10 : startY + 10;
+                const totals = getRabTotals();
+                doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+                if (totals.discount > 0) {
+                    doc.text(`Diskon (${totals.percent.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%): - ${formatIDR(totals.discount)}`, 14, finalY);
+                    finalY += 6;
+                }
+                doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+                doc.text(`TOTAL ESTIMASI AKHIR: ${formatIDR(totals.total)}`, 14, finalY);
+
+                doc.save(`RAB_${appData.project.name.replace(/\s+/g, '_')}.pdf`);
+                closeModal('modal-export');
+                showToast("Sukses", "Laporan PDF berhasil diunduh.");
+            } catch (err) {
+                console.error(err);
+                showToast("Gagal", "Terjadi kesalahan saat membuat PDF: " + err.message, true);
+            }
+        }
+
+        // Initialize App on Window Load
+        window.addEventListener('load', function () {
+            try { loadFromStorage(); } catch (err) { console.error('Gagal memuat data tersimpan:', err); }
+            try { refreshAllViews(); } catch (err) { console.error('Gagal memperbarui tampilan:', err); }
+            initExpertCalculators();
+        });
+    </script>
+</body>
+</html>
