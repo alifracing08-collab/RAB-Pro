@@ -232,8 +232,20 @@
                         <input type="number" step="0.01" id="p-landarea" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Luas Bangunan (m²) *</label>
-                        <input type="number" step="0.01" id="p-buildingarea" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                        <label class="block font-semibold text-slate-700 mb-1">Panjang Bangunan (m)</label>
+                        <input type="number" min="0" step="0.01" id="p-building-length" value="0" oninput="updateBuildingMeasure()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Lebar Bangunan (m)</label>
+                        <input type="number" min="0" step="0.01" id="p-building-width" value="0" oninput="updateBuildingMeasure()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Tinggi Bangunan (m) — opsional untuk volume</label>
+                        <input type="number" min="0" step="0.01" id="p-building-height" value="0" oninput="updateBuildingMeasure()" class="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-2">
+                        <div><label class="block font-semibold text-slate-700 mb-1">Total Luas Bangunan (m²)</label><input type="number" step="0.01" id="p-buildingarea" class="w-full p-2.5 border border-emerald-300 rounded-xl bg-white font-bold text-emerald-800" readonly required><p class="text-[10px] text-slate-500 mt-1">Panjang × lebar × jumlah lantai</p></div>
+                        <div><label class="block font-semibold text-slate-700 mb-1">Estimasi Volume Bangunan (m³)</label><input type="text" id="p-buildingvolume" class="w-full p-2.5 border border-emerald-300 rounded-xl bg-white font-bold text-emerald-800" readonly value="0 m³"><p class="text-[10px] text-slate-500 mt-1">Total luas × tinggi bangunan</p></div>
                     </div>
                     <div class="md:col-span-2">
                         <label class="block font-semibold text-slate-700 mb-1">Catatan & Asumsi Proyek</label>
@@ -300,7 +312,7 @@
                     </table>
                 </div>
                 <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4"><label for="rab-discount-amount" class="block font-semibold text-slate-700 mb-2">Diskon (Rp) — tampil sebagai Diskon %</label><input id="rab-discount-amount" type="number" min="0" step="1000" value="0" oninput="renderRabTotals()" class="w-full p-2.5 border border-slate-300 rounded-xl bg-white" placeholder="Contoh: 2000000"><p class="text-slate-500 mt-2">Masukkan nominal potongan. Persentase dihitung otomatis dari total RAB.</p></div>
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4"><label for="rab-discount-amount" class="block font-semibold text-slate-700 mb-2">Diskon (Rp) — tampil sebagai Diskon %</label><input id="rab-discount-amount" type="text" inputmode="numeric" data-idr="true" value="0" oninput="renderRabTotals()" class="w-full p-2.5 border border-slate-300 rounded-xl bg-white" placeholder="Contoh: 2000000"><p class="text-slate-500 mt-2">Masukkan nominal potongan. Persentase dihitung otomatis dari total RAB.</p></div>
                     <div class="md:col-span-2 bg-slate-900 text-white rounded-xl p-4 space-y-2">
                         <div class="flex justify-between gap-3"><span>Subtotal RAB</span><strong id="rab-subtotal">Rp 0</strong></div>
                         <div id="rab-discount-row" class="hidden flex justify-between gap-3 text-amber-300"><span id="rab-discount-label">Diskon (0%)</span><strong id="rab-discount-value">- Rp 0</strong></div>
@@ -755,7 +767,7 @@
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Harga Satuan (Rp) *</label>
-                    <input type="number" id="item-price" class="w-full p-2.5 border border-slate-300 rounded-xl" required>
+                    <input type="text" inputmode="numeric" data-idr="true" id="item-price" class="w-full p-2.5 border border-slate-300 rounded-xl" required>
                 </div>
                 <div class="flex justify-end gap-2 pt-3">
                     <button type="button" onclick="closeModal('modal-add-item')" class="px-4 py-2 border border-slate-300 rounded-xl text-slate-700 font-semibold">Batal</button>
@@ -788,9 +800,9 @@
           <div class="sm:col-span-2"><label class="block font-semibold mb-1">Nama Pekerjaan *</label><input id="ahsp-name" required maxlength="150" class="w-full p-2.5 border rounded-xl" placeholder="Contoh: Pekerjaan pasangan batako"></div>
           <div><label class="block font-semibold mb-1">Kode AHSP</label><input id="ahsp-code" class="w-full p-2.5 border rounded-xl" placeholder="AHSP-001"></div>
           <div><label class="block font-semibold mb-1">Satuan *</label><select id="ahsp-unit" class="w-full p-2.5 border rounded-xl"><option>m2</option><option>m3</option><option>m</option><option>kg</option><option>bh</option><option>titik</option><option>ls</option></select></div>
-          <div><label class="block font-semibold mb-1">Biaya Material (Rp)</label><input id="ahsp-mat" type="number" min="0" value="0" required class="w-full p-2.5 border rounded-xl"></div>
-          <div><label class="block font-semibold mb-1">Biaya Upah (Rp)</label><input id="ahsp-labor" type="number" min="0" value="0" required class="w-full p-2.5 border rounded-xl"></div>
-          <div><label class="block font-semibold mb-1">Biaya Peralatan (Rp)</label><input id="ahsp-equip" type="number" min="0" value="0" required class="w-full p-2.5 border rounded-xl"></div>
+          <div><label class="block font-semibold mb-1">Biaya Material (Rp)</label><input id="ahsp-mat" type="text" inputmode="numeric" data-idr="true" value="0" required class="w-full p-2.5 border rounded-xl"></div>
+          <div><label class="block font-semibold mb-1">Biaya Upah (Rp)</label><input id="ahsp-labor" type="text" inputmode="numeric" data-idr="true" value="0" required class="w-full p-2.5 border rounded-xl"></div>
+          <div><label class="block font-semibold mb-1">Biaya Peralatan (Rp)</label><input id="ahsp-equip" type="text" inputmode="numeric" data-idr="true" value="0" required class="w-full p-2.5 border rounded-xl"></div>
           <div class="sm:col-span-2 flex justify-end gap-2 pt-2"><button type="button" onclick="closeModal('modal-ahsp')" class="px-4 py-2 border rounded-xl">Batal</button><button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-xl font-semibold">Simpan AHSP</button></div>
         </form>
       </div>
@@ -1030,6 +1042,52 @@
             }
         }
 
+        function parseNumericInput(value) {
+            if (value === null || value === undefined || String(value).trim() === '') return 0;
+            return Number(String(value).replace(/,/g, '.')) || 0;
+        }
+
+        function parseMoneyInput(value) {
+            if (value === null || value === undefined) return 0;
+            return Number(String(value).replace(/[^0-9]/g, '')) || 0;
+        }
+
+        function formatThousandsInput(input) {
+            const digits = String(input.value || '').replace(/[^0-9]/g, '');
+            input.value = digits ? Number(digits).toLocaleString('id-ID') : '';
+        }
+
+        function initFriendlyNumberInputs() {
+            document.querySelectorAll('input[data-idr="true"]').forEach(input => {
+                if (input.dataset.idrBound) return;
+                input.dataset.idrBound = '1';
+                input.addEventListener('focus', () => { if (input.value.trim() === '0' || input.value.trim() === '0,00') input.value = ''; });
+                input.addEventListener('input', () => {
+                    const raw = input.value.replace(/[^0-9]/g, '');
+                    input.value = raw ? Number(raw).toLocaleString('id-ID') : '';
+                    input.dispatchEvent(new Event('idrchange', { bubbles: true }));
+                });
+                input.addEventListener('blur', () => { if (!input.value.trim()) input.value = '0'; else formatThousandsInput(input); });
+            });
+            document.querySelectorAll('input[type="number"]').forEach(input => {
+                if (input.dataset.zeroSelectBound) return;
+                input.dataset.zeroSelectBound = '1';
+                input.addEventListener('focus', () => { if (input.value === '0') input.select(); });
+            });
+        }
+
+        function updateBuildingMeasure() {
+            const length = Math.max(0, parseNumericInput(document.getElementById('p-building-length')?.value));
+            const width = Math.max(0, parseNumericInput(document.getElementById('p-building-width')?.value));
+            const height = Math.max(0, parseNumericInput(document.getElementById('p-building-height')?.value));
+            const floors = Math.max(1, parseNumericInput(document.getElementById('p-floors')?.value) || 1);
+            const area = length * width * floors;
+            const areaInput = document.getElementById('p-buildingarea');
+            if (areaInput) areaInput.value = area.toFixed(2);
+            const volumeInput = document.getElementById('p-buildingvolume');
+            if (volumeInput) volumeInput.value = (area * height).toLocaleString('id-ID', { maximumFractionDigits: 2 }) + ' m³';
+        }
+
         function formatIDR(num) {
             return "Rp " + Number(num).toLocaleString('id-ID', { maximumFractionDigits: 0 });
         }
@@ -1111,11 +1169,18 @@
             document.getElementById('p-floors').value = appData.project.floors || 2;
             document.getElementById('p-landarea').value = appData.project.landarea || '';
             document.getElementById('p-buildingarea').value = appData.project.buildingarea || '';
+            document.getElementById('p-building-length').value = appData.project.buildingLength || 0;
+            document.getElementById('p-building-width').value = appData.project.buildingWidth || 0;
+            document.getElementById('p-building-height').value = appData.project.buildingHeight || 0;
+            updateBuildingMeasure();
             document.getElementById('p-notes').value = appData.project.notes || '';
         }
 
+        document.getElementById('p-floors')?.addEventListener('input', updateBuildingMeasure);
+
         function saveProjectData(e) {
             e.preventDefault();
+            updateBuildingMeasure();
             appData.project = {
                 name: document.getElementById('p-name').value,
                 owner: document.getElementById('p-owner').value,
@@ -1127,6 +1192,9 @@
                 floors: parseInt(document.getElementById('p-floors').value),
                 landarea: parseFloat(document.getElementById('p-landarea').value) || 0,
                 buildingarea: parseFloat(document.getElementById('p-buildingarea').value) || 1,
+                buildingLength: parseNumericInput(document.getElementById('p-building-length').value),
+                buildingWidth: parseNumericInput(document.getElementById('p-building-width').value),
+                buildingHeight: parseNumericInput(document.getElementById('p-building-height').value),
                 notes: document.getElementById('p-notes').value
             };
             saveToStorage();
@@ -1222,7 +1290,7 @@
         function getRabTotals() {
             const subtotal = appData.items.reduce((sum, item) => sum + (Number(item.vol) || 0) * (Number(item.price) || 0), 0);
             const input = document.getElementById('rab-discount-amount');
-            const discount = Math.min(subtotal, Math.max(0, Number(input?.value) || 0));
+            const discount = Math.min(subtotal, Math.max(0, parseMoneyInput(input?.value) || 0));
             const percent = subtotal > 0 ? discount / subtotal * 100 : 0;
             return { subtotal, discount, percent, total: subtotal - discount };
         }
@@ -1272,7 +1340,7 @@
             document.getElementById('item-spec').value = item.spec;
             document.getElementById('item-unit').value = item.unit;
             document.getElementById('item-vol').value = item.vol;
-            document.getElementById('item-price').value = item.price;
+            document.getElementById('item-price').value = Number(item.price || 0).toLocaleString('id-ID');
             document.getElementById('modal-add-item').classList.remove('hidden');
         }
 
@@ -1286,7 +1354,7 @@
                 spec: document.getElementById('item-spec').value,
                 unit: document.getElementById('item-unit').value,
                 vol: parseFloat(document.getElementById('item-vol').value) || 0,
-                price: parseFloat(document.getElementById('item-price').value) || 0
+                price: parseMoneyInput(document.getElementById('item-price').value) || 0
             };
 
             if (editId) {
@@ -1385,7 +1453,7 @@
             const name = document.getElementById('ahsp-name').value.trim();
             if (!name) { showToast('Periksa input', 'Nama pekerjaan wajib diisi.', true); return; }
             const nextId = appData.ahsp.reduce((m, a) => Math.max(m, Number(a.id) || 0), 0) + 1;
-            appData.ahsp.push({ id: nextId, code: document.getElementById('ahsp-code').value.trim() || `AHSP-${String(nextId).padStart(3,'0')}`, name, unit: document.getElementById('ahsp-unit').value, matCost: Math.max(0, Number(document.getElementById('ahsp-mat').value) || 0), laborCost: Math.max(0, Number(document.getElementById('ahsp-labor').value) || 0), equipCost: Math.max(0, Number(document.getElementById('ahsp-equip').value) || 0) });
+            appData.ahsp.push({ id: nextId, code: document.getElementById('ahsp-code').value.trim() || `AHSP-${String(nextId).padStart(3,'0')}`, name, unit: document.getElementById('ahsp-unit').value, matCost: Math.max(0, parseMoneyInput(document.getElementById('ahsp-mat').value) || 0), laborCost: Math.max(0, parseMoneyInput(document.getElementById('ahsp-labor').value) || 0), equipCost: Math.max(0, parseMoneyInput(document.getElementById('ahsp-equip').value) || 0) });
             saveToStorage(); window.selectedAhspId = nextId; renderAhspList(); selectAhsp(nextId); closeModal('modal-ahsp'); showToast('Sukses', 'Analisis AHSP berhasil ditambahkan.');
         }
 
@@ -1940,6 +2008,7 @@
             try { loadFromStorage(); } catch (err) { console.error('Gagal memuat data tersimpan:', err); }
             try { refreshAllViews(); } catch (err) { console.error('Gagal memperbarui tampilan:', err); }
             initExpertCalculators();
+            initFriendlyNumberInputs();
         });
     </script>
 </body>
