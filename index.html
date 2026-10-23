@@ -467,13 +467,24 @@
                 </div>
 
                 <!-- Grand Total Box -->
-                <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div>
-                        <p class="text-xs text-slate-400 uppercase tracking-wider">TOTAL AKHIR RAB (DIBULATKAN)</p>
-                        <h3 id="recap-grand-total" class="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1">Rp0</h3>
-                        <p id="recap-total-words" class="text-xs text-slate-300 italic mt-1">Terbilang: -</p>
+                <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex flex-col sm:flex-row justify-between items-start gap-5">
+                    <div class="w-full flex-1">
+                        <p class="text-xs text-slate-400 uppercase tracking-wider">RINCIAN PERHITUNGAN TOTAL RAB</p>
+                        <div id="recap-calculation-breakdown" class="mt-3 space-y-2 text-sm">
+                            <div class="flex justify-between gap-4"><span>Biaya Langsung</span><strong id="recap-breakdown-direct">Rp0</strong></div>
+                            <div id="recap-breakdown-discount-row" class="hidden flex justify-between gap-4 text-amber-300"><span id="recap-breakdown-discount-label">Diskon (0%)</span><strong id="recap-breakdown-discount">- Rp0</strong></div>
+                            <div class="flex justify-between gap-4"><span>Biaya Setelah Diskon</span><strong id="recap-breakdown-after-discount">Rp0</strong></div>
+                            <div class="flex justify-between gap-4"><span id="recap-breakdown-overhead-label">Overhead &amp; Jasa Kontraktor (10%)</span><strong id="recap-breakdown-overhead">Rp0</strong></div>
+                            <div id="recap-breakdown-tax-row" class="flex justify-between gap-4"><span>PPN 11%</span><strong id="recap-breakdown-tax">Rp0</strong></div>
+                            <div class="flex justify-between gap-4 border-t border-slate-700 pt-2 mt-2"><span>Pembulatan</span><strong id="recap-breakdown-rounding">Rp0</strong></div>
+                        </div>
+                        <div class="border-t border-slate-600 mt-4 pt-4">
+                            <p class="text-xs text-slate-400 uppercase tracking-wider">TOTAL AKHIR RAB (DIBULATKAN)</p>
+                            <h3 id="recap-grand-total" class="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1">Rp0</h3>
+                            <p id="recap-total-words" class="text-xs text-slate-300 italic mt-1">Nilai akhir setelah diskon, overhead, PPN, dan pembulatan.</p>
+                        </div>
                     </div>
-                    <div class="text-right sm:text-right">
+                    <div class="text-left sm:text-right sm:min-w-[180px]">
                         <p class="text-xs text-slate-400">Estimasi per m² Bangunan</p>
                         <p id="recap-unit-cost" class="text-lg font-bold text-white mt-0.5">Rp0 / m²</p>
                     </div>
@@ -1456,7 +1467,7 @@
         function calculateRecap() {
             let totalDirect = 0;
             appData.items.forEach(i => {
-                totalDirect += (i.vol * i.price);
+                totalDirect += (Number(i.vol) || 0) * (Number(i.price) || 0);
             });
 
             document.getElementById('recap-proj-subtitle').innerText = `Proyek: ${appData.project.name} | Lokasi: ${appData.project.location}`;
@@ -1464,10 +1475,9 @@
 
             let recapHtml = "";
             let counter = 1;
-
             appData.categories.forEach(cat => {
                 let catTotal = 0;
-                appData.items.filter(i => i.catId === cat.id).forEach(i => { catTotal += (i.vol * i.price); });
+                appData.items.filter(i => i.catId === cat.id).forEach(i => { catTotal += (Number(i.vol) || 0) * (Number(i.price) || 0); });
                 if (catTotal > 0 || appData.items.length > 0) {
                     let weight = totalDirect > 0 ? ((catTotal / totalDirect) * 100).toFixed(2) : 0;
                     recapHtml += `
@@ -1482,22 +1492,37 @@
             });
             document.getElementById('recap-table-body').innerHTML = recapHtml;
 
-            // Overhead & Tax Calculation
-            const overheadPct = parseFloat(document.getElementById('recap-overhead-pct').value) || 0;
+            // Discount comes from Detail RAB & Volume. Apply it before overhead and PPN.
+            const rabTotals = getRabTotals();
+            const discount = Math.min(totalDirect, Math.max(0, Number(rabTotals.discount) || 0));
+            const discountPct = totalDirect > 0 ? discount / totalDirect * 100 : 0;
+            const afterDiscount = Math.max(0, totalDirect - discount);
+            const overheadPct = Math.max(0, parseFloat(document.getElementById('recap-overhead-pct').value) || 0);
             const taxEnabled = document.getElementById('recap-tax-enabled').checked;
             const rounding = document.getElementById('recap-rounding').value;
 
-            let overheadCost = totalDirect * (overheadPct / 100);
-            let subtotalWithOverhead = totalDirect + overheadCost;
-            let taxCost = taxEnabled ? (subtotalWithOverhead * 0.11) : 0;
-            let grandTotal = subtotalWithOverhead + taxCost;
+            const overheadCost = afterDiscount * (overheadPct / 100);
+            const subtotalWithOverhead = afterDiscount + overheadCost;
+            const taxCost = taxEnabled ? subtotalWithOverhead * 0.11 : 0;
+            const beforeRounding = subtotalWithOverhead + taxCost;
+            let grandTotal = beforeRounding;
+            if (rounding === 'thousand') grandTotal = Math.round(grandTotal / 1000) * 1000;
+            const roundingAdjustment = grandTotal - beforeRounding;
 
-            if (rounding === 'thousand') {
-                grandTotal = Math.round(grandTotal / 1000) * 1000;
-            }
-
+            document.getElementById('recap-breakdown-direct').innerText = formatIDR(totalDirect);
+            const discountRow = document.getElementById('recap-breakdown-discount-row');
+            discountRow.classList.toggle('hidden', !(discount > 0));
+            document.getElementById('recap-breakdown-discount-label').innerText = `Diskon (${discountPct.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%)`;
+            document.getElementById('recap-breakdown-discount').innerText = '- ' + formatIDR(discount);
+            document.getElementById('recap-breakdown-after-discount').innerText = formatIDR(afterDiscount);
+            document.getElementById('recap-breakdown-overhead-label').innerText = `Overhead & Jasa Kontraktor (${overheadPct.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%)`;
+            document.getElementById('recap-breakdown-overhead').innerText = '+ ' + formatIDR(overheadCost);
+            document.getElementById('recap-breakdown-tax-row').classList.toggle('hidden', !taxEnabled);
+            document.getElementById('recap-breakdown-tax').innerText = '+ ' + formatIDR(taxCost);
+            document.getElementById('recap-breakdown-rounding').innerText = (roundingAdjustment > 0 ? '+ ' : (roundingAdjustment < 0 ? '- ' : '')) + formatIDR(Math.abs(roundingAdjustment));
             document.getElementById('recap-grand-total').innerText = formatIDR(grandTotal);
-            
+            document.getElementById('recap-total-words').innerText = 'Nilai akhir setelah diskon, overhead, PPN, dan pembulatan.';
+
             const bArea = parseFloat(appData.project.buildingarea) || 1;
             document.getElementById('recap-unit-cost').innerText = `${formatIDR(grandTotal / bArea)} / m²`;
         }
